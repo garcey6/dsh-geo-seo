@@ -47,7 +47,7 @@ install it like any other bundle.
 1. Open **Plugins → Discover**, add this index URL once:
 
    ```text
-   https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@f5c044a/market/index.json
+   https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@8991ed5/market/index.json
    ```
 
    The app rejects redirects, so the index URL must answer `200` directly. This jsDelivr
@@ -56,9 +56,9 @@ install it like any other bundle.
 
    | Host | URL | Good for |
    | --- | --- | --- |
-   | jsDelivr `fastly` (recommended) | `https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@f5c044a/market/index.json` | any network |
-   | jsDelivr `gcore` | `https://gcore.jsdelivr.net/gh/garcey6/dsh-geo-seo@f5c044a/market/index.json` | same file |
-   | jsDelivr `testingcf` | `https://testingcf.jsdelivr.net/gh/garcey6/dsh-geo-seo@f5c044a/market/index.json` | same file |
+   | jsDelivr `fastly` (recommended) | `https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@8991ed5/market/index.json` | any network |
+   | jsDelivr `gcore` | `https://gcore.jsdelivr.net/gh/garcey6/dsh-geo-seo@8991ed5/market/index.json` | same file |
+   | jsDelivr `testingcf` | `https://testingcf.jsdelivr.net/gh/garcey6/dsh-geo-seo@8991ed5/market/index.json` | same file |
    | GitHub Pages | `https://garcey6.github.io/dsh-geo-seo/market/index.json` | only after Pages is enabled |
    | GitHub `main` | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` | plain TLS to GitHub |
 
@@ -305,7 +305,7 @@ Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0
 - Repository: <https://github.com/garcey6/dsh-geo-seo>
 - Issues: <https://github.com/garcey6/dsh-geo-seo/issues>
 - npm: <https://www.npmjs.com/package/dsh-geo-seo>
-- Plugin market index: <https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@f5c044a/market/index.json> (source: [market/index.json](market/index.json))
+- Plugin market index: <https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@8991ed5/market/index.json> (source: [market/index.json](market/index.json))
 - Design notes: [docs/DETAIL.md](docs/DETAIL.md) · [中文](docs/DETAIL.zh.md)
 - Short descriptions for listings: [docs/INTRO.md](docs/INTRO.md)
 
