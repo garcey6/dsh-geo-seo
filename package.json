@@ -80,7 +80,6 @@
   ],
   "scripts": {
     "build": "node ./node_modules/typescript/bin/tsc -p tsconfig.json",
-    "prepare": "node ./node_modules/typescript/bin/tsc -p tsconfig.json",
     "check:types": "node ./node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "test": "node --test \"dist/test/*.test.js\"",
     "test:build": "node ./node_modules/typescript/bin/tsc -p tsconfig.json && node --test \"dist/test/*.test.js\"",
