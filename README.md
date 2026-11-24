@@ -42,12 +42,17 @@ install it like any other bundle.
    https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json
    ```
 
-   > If a local TLS proxy rewrites `raw.githubusercontent.com`, use the npm mirror of the
-   > same index — it is published inside the package and needs no GitHub access:
-   >
-   > ```text
-   > https://unpkg.com/dsh-geo-seo/market/index.json
-   > ```
+   The app rejects redirects, so the index URL must answer `200` directly. Two
+   equivalents are published; use whichever your network can reach:
+
+   | Host | URL |
+   | --- | --- |
+   | GitHub Pages (no redirect, stays current) | `https://garcey6.github.io/dsh-geo-seo/market/index.json` |
+   | npm mirror (no redirect, pinned per release) | `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json` |
+
+   > Do not use `https://unpkg.com/dsh-geo-seo/market/index.json` — the versionless form
+   > answers `302` and the Discover dialog reports "unexpected redirect". The pinned
+   > version URL above is the redirect-free form; bump it when a new version is released.
 
 2. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
