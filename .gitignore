@@ -4,3 +4,5 @@ dist/
 .tmp-out/
 *.tsbuildinfo
 *.log
+pack.json
+.packcheck.mjs

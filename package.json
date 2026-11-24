@@ -33,7 +33,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "bin": {
-    "geo-seo": "./dist/src/cli/main.js"
+    "geo-seo": "dist/src/cli/main.js"
   },
   "main": "./dist/src/index.js",
   "exports": {
