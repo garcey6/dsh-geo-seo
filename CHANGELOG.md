@@ -4,6 +4,17 @@ All notable changes to dsh-geo-seo are recorded here, one dated section per rele
 The rule pack has its own version (see `src/core/rules.ts`, `RULE_PACK_VERSION`) because a
 rule change alters scores without altering behaviour.
 
+## 0.1.1 - 2026-11-24
+
+Republished to the npm registry so `npm install dsh-geo-seo` resolves a package whose
+`engines.dsh` a DSH release actually satisfies (0.1.0 shipped `>=0.30.0` and is immutable).
+
+- Host entry: routes and tools register through their service objects (`webServer`, `tools`),
+  and tools register inside `ctx.inject(['tools'], …)`; tool parameters are raw JSON Schema.
+  Before this the plugin never activated: `apply()` threw on `this.prefixes`.
+- Sidebar seat registers only once `sidebarRightTabs` and `slots` are available.
+- `engines.dsh` is `>=0.2.2-rc.5` and read from `package.json` by the market index generator.
+
 ## Unreleased
 
 - Declared `engines.dsh` (`>=0.2.2-rc.5`) so the plugin market can check compatibility instead of
