@@ -15,6 +15,12 @@ rule change alters scores without altering behaviour.
   source can never install. The index generator now derives the commit with `git rev-parse`,
   the timestamp with `git log -1 --format=%ct`, and inlines the icon as a `data:` URL so the
   market does not fetch `raw.githubusercontent.com`.
+- The sidebar panel now waits for the tab-type registry instead of reading `ctx.sidebarRightTabs`
+  at apply time. The native seat declares `sidebar.right.pane.tab` before it provides that service,
+  so the old read saw `undefined`, returned quietly and registered nothing — permanently, because
+  the declaration never collapses. Registration now runs inside
+  `ctx.inject(['sidebarRightTabs', 'slots'], …)`, the guide row carries the shape the registry
+  validates (`order` plus thunk title/description), and the body seat is keyed to the type id.
 - `dist/` is committed and the `prepare` script is gone. A git install needs no build step,
   which is the only way it works under pnpm, whose `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`
   blocks an un-allowlisted `prepare` script for a git dependency.
