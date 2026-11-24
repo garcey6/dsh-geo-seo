@@ -10,6 +10,14 @@ rule change alters scores without altering behaviour.
   assuming one, and made `scripts/build-market-index.mjs` read that range from `package.json`
   rather than hardcoding it. The index previously advertised `>=0.30.0`, which no DSH release
   satisfies, so every install was refused as incompatible.
+- Market entry installs from a commit-pinned git source instead of the npm registry: the
+  published `0.1.0` tarball keeps the wrong `engines.dsh` and cannot be replaced, so an npm
+  source can never install. The index generator now derives the commit with `git rev-parse`,
+  the timestamp with `git log -1 --format=%ct`, and inlines the icon as a `data:` URL so the
+  market does not fetch `raw.githubusercontent.com`.
+- `dist/` is committed and the `prepare` script is gone. A git install needs no build step,
+  which is the only way it works under pnpm, whose `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`
+  blocks an un-allowlisted `prepare` script for a git dependency.
 
 ## 0.1.0 - 2026-11-24
 

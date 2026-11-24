@@ -39,30 +39,41 @@ install it like any other bundle.
 1. Open **Plugins → Discover**, add this index URL once:
 
    ```text
-   https://garcey6.github.io/dsh-geo-seo/market/index.json
+   https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@9803b82/market/index.json
    ```
 
-   The app rejects redirects, so the index URL must answer `200` directly. Use the GitHub
-   Pages copy: it is served by a CDN, never redirects, and is republished automatically
-   whenever this file changes.
+   The app rejects redirects, so the index URL must answer `200` directly. This jsDelivr
+   copy is pinned to a commit, so the bytes cannot drift, and it is served by a CDN that
+   needs no repository setting.
 
    | Host | URL | Good for |
    | --- | --- | --- |
-   | GitHub Pages (recommended) | `https://garcey6.github.io/dsh-geo-seo/market/index.json` | any network |
-   | GitHub `main` (same file) | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` | plain TLS to GitHub |
+   | jsDelivr `fastly` (recommended) | `https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@9803b82/market/index.json` | any network |
+   | jsDelivr `gcore` | `https://gcore.jsdelivr.net/gh/garcey6/dsh-geo-seo@9803b82/market/index.json` | same file |
+   | jsDelivr `testingcf` | `https://testingcf.jsdelivr.net/gh/garcey6/dsh-geo-seo@9803b82/market/index.json` | same file |
+   | GitHub Pages | `https://garcey6.github.io/dsh-geo-seo/market/index.json` | only after Pages is enabled |
+   | GitHub `main` | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` | plain TLS to GitHub |
 
-   > The app fetches with Node's own trust store, not the operating system's. On a network
-   > that intercepts GitHub TLS with a corporate root CA, the `raw.githubusercontent.com`
-   > URL fails with `unable to verify the first certificate` even though a browser opens it.
-   > The Pages host has no such problem.
-   >
-   > Both unpkg forms are unusable for 0.1.0. `https://unpkg.com/dsh-geo-seo/market/index.json`
-   > answers `302`, which Discover reports as "unexpected redirect". The pinned form
-   > `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json` is frozen inside the 0.1.0 tarball,
-   > whose `engines.dsh` predates this package declaring one, so installing it fails the
-   > compatibility check. The npm mirror becomes usable again with the next published version.
+   Hosts that do not work, and why:
 
-2. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
+   - `https://cdn.jsdelivr.net/...`, the default jsDelivr host, is reset on some networks
+     (`ECONNRESET`); the `fastly`, `gcore` and `testingcf` aliases serve the same file.
+   - `https://unpkg.com/dsh-geo-seo/market/index.json` answers `302`, which Discover reports
+     as "unexpected redirect". The pinned form `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json`
+     answers `200` but is frozen inside the 0.1.0 tarball, whose index predates this fix.
+   - `https://raw.githubusercontent.com/...` fails with `unable to verify the first
+     certificate` wherever a TLS proxy re-signs GitHub traffic: the app fetches with Node's
+     bundled CAs, not the operating system's store.
+   - `https://garcey6.github.io/dsh-geo-seo/market/index.json` answers `404` until GitHub
+     Pages is enabled in **Settings → Pages → Source: GitHub Actions**; the deploy workflow
+     cannot create the site itself, because `GITHUB_TOKEN` has no admin rights.
+
+2. The index installs **from git at a pinned commit, not from npm**. `dsh-geo-seo@0.1.0`
+   on npm declares `engines.dsh` as `>=0.30.0`, which no DSH release satisfies, and a
+   published version cannot be replaced; the git source installs this repository, whose
+   manifest and committed `dist/` are correct.
+
+3. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
    `geo_seo_questions` — and serves its panel from the same local web server as the app
    (`/geo-seo/api/*`). Nothing is uploaded anywhere.
@@ -70,14 +81,20 @@ install it like any other bundle.
 
 ### From a git URL
 
-When neither index host is reachable, install the bundle straight from the repository —
-the clone goes through `git`, which uses the operating system's trust store:
+When no index host is reachable, install the bundle straight from the repository — the
+clone goes through `git`, which uses the operating system's trust store:
 
 ```text
 github:garcey6/dsh-geo-seo
 ```
 
-`prepare` compiles the package after checkout, so the clone arrives with `dist/` built.
+The built `dist/` is committed, so the clone arrives ready to run. That is deliberate:
+pnpm refuses to run a git dependency's `prepare` script unless the installing project
+allowlists it (`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`), and the DSH profile cannot be
+expected to carry an allowlist entry for this package. Nothing is compiled at install time.
+
+The market entry uses the same tree, pinned to a commit:
+`git+https://github.com/garcey6/dsh-geo-seo.git#<40-hex sha>`.
 
 ### From a checkout of this repository
 
@@ -253,7 +270,7 @@ Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0
 - Repository: <https://github.com/garcey6/dsh-geo-seo>
 - Issues: <https://github.com/garcey6/dsh-geo-seo/issues>
 - npm: <https://www.npmjs.com/package/dsh-geo-seo>
-- Plugin market index: <https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json>
+- Plugin market index: <https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@9803b82/market/index.json> (source: [market/index.json](market/index.json))
 - Design notes: [docs/DETAIL.md](docs/DETAIL.md) · [中文](docs/DETAIL.zh.md)
 - Short descriptions for listings: [docs/INTRO.md](docs/INTRO.md)
 
