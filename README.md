@@ -42,6 +42,13 @@ install it like any other bundle.
    https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json
    ```
 
+   > If a local TLS proxy rewrites `raw.githubusercontent.com`, use the npm mirror of the
+   > same index — it is published inside the package and needs no GitHub access:
+   >
+   > ```text
+   > https://unpkg.com/dsh-geo-seo/market/index.json
+   > ```
+
 2. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
    `geo_seo_questions` — and serves its panel from the same local web server as the app
