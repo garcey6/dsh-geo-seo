@@ -6,9 +6,11 @@
   "name": "dsh-geo-seo",
   "softwareVersion": "0.1.0",
   "license": "MIT",
+  "url": "https://github.com/garcey6/dsh-geo-seo#readme",
   "author": {
     "@type": "Person",
     "name": "garcey"
   },
-  "keywords": "dsh, dsh-plugin, geo, seo, llms-txt, structured-data, documentation-audit"
+  "keywords": "dsh, dsh-plugin, geo, seo, llms-txt, structured-data, documentation-audit",
+  "dateModified": "2026-11-24"
 }

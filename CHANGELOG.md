@@ -4,7 +4,14 @@ All notable changes to dsh-geo-seo are recorded here, one dated section per rele
 The rule pack has its own version (see `src/core/rules.ts`, `RULE_PACK_VERSION`) because a
 rule change alters scores without altering behaviour.
 
-## 0.1.0 - 2026-02-18
+## Unreleased
+
+- Declared `engines.dsh` (`>=0.2.2-rc.5`) so the plugin market can check compatibility instead of
+  assuming one, and made `scripts/build-market-index.mjs` read that range from `package.json`
+  rather than hardcoding it. The index previously advertised `>=0.30.0`, which no DSH release
+  satisfies, so every install was refused as incompatible.
+
+## 0.1.0 - 2026-11-24
 
 First release, rule pack 2026.02.1.
 

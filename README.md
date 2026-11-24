@@ -9,7 +9,7 @@ shows every deduction with a file and line anchor, and states the evidence behin
 rule. **It does not promise rankings, traffic or citations, and it never estimates
 them.** A score is a description of your documentation, not a forecast.
 
-Current version 0.1.0 · requires Node 22.6+ and DSH 0.30+ · MIT · Last updated: 2026-02-18 ·
+Current version 0.1.0 · requires Node 22.6+ and DSH 0.2.2-rc.5+ · MIT · Last updated: 2026-11-24 ·
 中文简介见 [docs/INTRO.md](docs/INTRO.md).
 
 ```
@@ -42,17 +42,19 @@ install it like any other bundle.
    https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json
    ```
 
-   The app rejects redirects, so the index URL must answer `200` directly. Two
-   equivalents are published; use whichever your network can reach:
+   The app rejects redirects, so the index URL must answer `200` directly. The
+   repository copy is authoritative and is corrected without needing a release:
 
    | Host | URL |
    | --- | --- |
-   | GitHub Pages (no redirect, stays current) | `https://garcey6.github.io/dsh-geo-seo/market/index.json` |
-   | npm mirror (no redirect, pinned per release) | `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json` |
+   | GitHub `main` (authoritative) | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` |
+   | GitHub Pages (same file, no redirect) | `https://garcey6.github.io/dsh-geo-seo/market/index.json` |
 
-   > Do not use `https://unpkg.com/dsh-geo-seo/market/index.json` — the versionless form
-   > answers `302` and the Discover dialog reports "unexpected redirect". The pinned
-   > version URL above is the redirect-free form; bump it when a new version is released.
+   > Both unpkg forms are unusable for this release. `https://unpkg.com/dsh-geo-seo/market/index.json`
+   > answers `302`, which Discover reports as "unexpected redirect". The pinned form
+   > `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json` is frozen inside the 0.1.0 tarball,
+   > whose `engines.dsh` was written before this package declared one, so installing it fails the
+   > compatibility check. The npm mirror becomes usable again with the next published version.
 
 2. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
@@ -227,7 +229,7 @@ evidence level; adding a rule means adding one entry plus a fixture in `test/`.
 ## Changelog
 
 Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0.1.0
-(2026-02-18).
+(2026-11-24).
 
 ## Links
 

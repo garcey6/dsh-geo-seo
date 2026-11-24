@@ -19,6 +19,12 @@ if (!Number.isInteger(publishTimestamp) || publishTimestamp <= 0) {
   process.exit(2);
 }
 
+const enginesDsh = pkg.engines?.dsh;
+if (typeof enginesDsh !== 'string' || enginesDsh.trim() === '') {
+  console.error('package.json must declare engines.dsh: the market evaluates it against the running DSH version');
+  process.exit(2);
+}
+
 const repository = 'https://github.com/garcey6/dsh-geo-seo';
 const index = {
   format: 1,
@@ -58,7 +64,7 @@ const index = {
           version: pkg.version,
           publishTimestamp,
           source: { type: 'npm' },
-          engines: { dsh: '>=0.30.0' },
+          engines: { dsh: enginesDsh },
         },
       ],
     },
