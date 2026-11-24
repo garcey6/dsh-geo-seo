@@ -1,9 +1,14 @@
 name: pages
 
 on:
-  # Manual only: creating the Pages site needs repo-admin rights, which GITHUB_TOKEN
-  # does not have. Enable Pages once in Settings -> Pages (Source: GitHub Actions),
-  # then run this workflow to publish market/ at the versionless URL.
+  # Creating the Pages site needs repo-admin rights, which GITHUB_TOKEN does not have,
+  # so the site is enabled once by hand in Settings -> Pages (Source: GitHub Actions).
+  # After that, every index change redeploys automatically.
+  push:
+    branches: [main]
+    paths:
+      - market/**
+      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:

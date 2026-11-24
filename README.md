@@ -39,21 +39,27 @@ install it like any other bundle.
 1. Open **Plugins → Discover**, add this index URL once:
 
    ```text
-   https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json
+   https://garcey6.github.io/dsh-geo-seo/market/index.json
    ```
 
-   The app rejects redirects, so the index URL must answer `200` directly. The
-   repository copy is authoritative and is corrected without needing a release:
+   The app rejects redirects, so the index URL must answer `200` directly. Use the GitHub
+   Pages copy: it is served by a CDN, never redirects, and is republished automatically
+   whenever this file changes.
 
-   | Host | URL |
-   | --- | --- |
-   | GitHub `main` (authoritative) | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` |
-   | GitHub Pages (same file, no redirect) | `https://garcey6.github.io/dsh-geo-seo/market/index.json` |
+   | Host | URL | Good for |
+   | --- | --- | --- |
+   | GitHub Pages (recommended) | `https://garcey6.github.io/dsh-geo-seo/market/index.json` | any network |
+   | GitHub `main` (same file) | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` | plain TLS to GitHub |
 
-   > Both unpkg forms are unusable for this release. `https://unpkg.com/dsh-geo-seo/market/index.json`
+   > The app fetches with Node's own trust store, not the operating system's. On a network
+   > that intercepts GitHub TLS with a corporate root CA, the `raw.githubusercontent.com`
+   > URL fails with `unable to verify the first certificate` even though a browser opens it.
+   > The Pages host has no such problem.
+   >
+   > Both unpkg forms are unusable for 0.1.0. `https://unpkg.com/dsh-geo-seo/market/index.json`
    > answers `302`, which Discover reports as "unexpected redirect". The pinned form
    > `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json` is frozen inside the 0.1.0 tarball,
-   > whose `engines.dsh` was written before this package declared one, so installing it fails the
+   > whose `engines.dsh` predates this package declaring one, so installing it fails the
    > compatibility check. The npm mirror becomes usable again with the next published version.
 
 2. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
@@ -61,6 +67,17 @@ install it like any other bundle.
    `geo_seo_questions` — and serves its panel from the same local web server as the app
    (`/geo-seo/api/*`). Nothing is uploaded anywhere.
 3. Open the right sidebar; the **GEO / SEO** tab appears in the guide and in the tab menu.
+
+### From a git URL
+
+When neither index host is reachable, install the bundle straight from the repository —
+the clone goes through `git`, which uses the operating system's trust store:
+
+```text
+github:garcey6/dsh-geo-seo
+```
+
+`prepare` compiles the package after checkout, so the clone arrives with `dist/` built.
 
 ### From a checkout of this repository
 
