@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sample-plugin</title>
+    <link rel="canonical" href="https://example.com/sample-plugin/" />
+    <script type="application/ld+json">
+      { "@context": "https://schema.org", "@type": "SoftwareApplication", "name": "sample-plugin", "description": "A deterministic word counter for the DeepSeek Harness composer", "applicationCategory": "DeveloperApplication", "operatingSystem": "Windows, macOS, Linux", "softwareVersion": "1.2.3", "license": "https://opensource.org/licenses/MIT" }
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>sample-plugin</h1>
+      <p>sample-plugin is a DeepSeek Harness plugin that adds a deterministic word counter to the composer. It answers how long a note is without sending anything to a server.</p>
+      <p>Install it with pnpm add dsh-sample-plugin, then configure maxChars and includeCjk. The plugin exposes the count_words tool and the sample.count command, and it rejects inputs above maxChars instead of truncating them.</p>
+      <p>License: MIT. Maintainer: example maintainers. Report issues at the repository URL above. Last updated 2026-02-10.</p>
+    </main>
+  </body>
+</html>

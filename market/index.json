@@ -1,0 +1,84 @@
+{
+  "format": 1,
+  "title": {
+    "en": "DSH GEO / SEO tools",
+    "zh": "DSH GEO / SEO 工具"
+  },
+  "description": {
+    "en": "Documentation readability for AI engines: score a repository against a versioned rule pack and generate the files engines read.",
+    "zh": "面向 AI 引擎的文档可读性：按带版本的规则包给仓库打分，并生成引擎真正会读的文件。"
+  },
+  "metadata": {
+    "categories": {
+      "documentation": {
+        "title": {
+          "en": "Documentation",
+          "zh": "文档"
+        }
+      }
+    },
+    "labels": {
+      "offline": {
+        "title": {
+          "en": "Offline",
+          "zh": "离线"
+        }
+      },
+      "cli": {
+        "title": {
+          "en": "CLI included",
+          "zh": "含 CLI"
+        }
+      }
+    },
+    "sortKeys": {}
+  },
+  "plugins": [
+    {
+      "name": "dsh-geo-seo",
+      "title": {
+        "en": "GEO / SEO",
+        "zh": "GEO / SEO"
+      },
+      "description": {
+        "en": "GEO/SEO health check for DSH plugin repositories: score docs against a versioned rule pack, then generate llms.txt, ai.txt and JSON-LD from the same verified facts.",
+        "zh": "读取仓库真实事实，按七维 100 分制给文档的 GEO 就绪度打分，扣分定位到 file:line，并能一次生成 llms.txt、llms-full.txt、ai.txt 与 JSON-LD；离线运行，不承诺排名。"
+      },
+      "icon": "https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/icon.svg",
+      "author": "garcey",
+      "homepage": "https://github.com/garcey6/dsh-geo-seo#readme",
+      "repository": {
+        "url": "https://github.com/garcey6/dsh-geo-seo"
+      },
+      "metadata": {
+        "category": "documentation",
+        "keywords": [
+          "dsh",
+          "dsh-plugin",
+          "geo",
+          "seo",
+          "llms-txt",
+          "structured-data",
+          "documentation-audit"
+        ],
+        "labels": [
+          "offline",
+          "cli"
+        ],
+        "sortKeys": {}
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1771387200,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.30.0"
+          }
+        }
+      ]
+    }
+  ]
+}

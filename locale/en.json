@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "title": "GEO health check",
+    "description": "Scores how ready a DSH plugin repository is for generative search engines: parses docs, metadata and source into a fact graph, reports weighted deductions with file and line anchors, generates llms.txt / ai.txt / JSON-LD that must match the visible text, and keeps a local, offline history of runs.",
+    "detail": "docs/DETAIL.md"
+  },
+  "tools": {
+    "check": "Run the GEO health check",
+    "generate": "Generate llms.txt, ai.txt and JSON-LD",
+    "audit": "Audit crawlability for international and domestic AI engines",
+    "monitor": "Record or read visibility monitoring history",
+    "rules": "List the versioned rule pack"
+  },
+  "panel": {
+    "title": "GEO health check"
+  }
+}

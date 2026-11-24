@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GEO / SEO</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfd;
+    --panel: #ffffff;
+    --panel-2: #f4f5f9;
+    --line: #e3e5ee;
+    --text: #1a1c22;
+    --muted: #666b7a;
+    --accent: #4f6ef7;
+    --ok: #1f9d63;
+    --warn: #b7770a;
+    --bad: #c8403a;
+    --info: #5a6b8c;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131418;
+      --panel: #1b1d23;
+      --panel-2: #22252d;
+      --line: #2c303a;
+      --text: #e9eaf0;
+      --muted: #9aa0b0;
+      --accent: #7d93ff;
+      --ok: #43c98c;
+      --warn: #e2b04a;
+      --bad: #f0736c;
+      --info: #93a4c4;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.55 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { display: flex; flex-direction: column; min-height: 100%; }
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px 10px; border-bottom: 1px solid var(--line); background: var(--panel);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: .2px; }
+  .logo { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(140deg,#5b7bff,#8f5bff); display: grid; place-items: center; }
+  .logo svg { width: 14px; height: 14px; }
+  .spacer { flex: 1; }
+  .pathbar { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel); align-items: center; }
+  .pathbar input {
+    flex: 1; min-width: 0; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; font: inherit;
+  }
+  .pathbar input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); border-color: var(--accent); }
+  button {
+    font: inherit; color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  button:hover { border-color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .55; cursor: default; }
+  nav.tabs { display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); background: var(--panel); overflow-x: auto; }
+  nav.tabs button {
+    background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+    padding: 7px 10px; color: var(--muted); white-space: nowrap;
+  }
+  nav.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  main { padding: 14px; display: grid; gap: 12px; align-content: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+  .scoreRow { display: flex; gap: 16px; align-items: center; }
+  .ring { position: relative; width: 104px; height: 104px; flex: none; }
+  .ring svg { transform: rotate(-90deg); width: 104px; height: 104px; }
+  .ring .val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring .val b { font-size: 27px; font-weight: 700; letter-spacing: -.5px; display: block; line-height: 1.1; }
+  .ring .val span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .scoreMeta { flex: 1; min-width: 0; display: grid; gap: 7px; }
+  .band { font-size: 15px; font-weight: 650; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+  .chip.err { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+  .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+  .chip.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
+  .cap { border-left: 3px solid var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); padding: 8px 10px; border-radius: 8px; font-size: 12px; }
+  .dim { display: grid; gap: 8px; }
+  .dimRow { display: grid; grid-template-columns: 1fr 74px; gap: 5px 10px; align-items: center; }
+  .dimName { font-size: 12px; }
+  .dimNum { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+  .track { grid-column: 1 / -1; height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #8f5bff); }
+  .fill.mid { background: linear-gradient(90deg, var(--warn), #d79a2b); }
+  .fill.low { background: linear-gradient(90deg, var(--bad), #e06a52); }
+  .finding { border-top: 1px solid var(--line); padding: 11px 0 2px; display: grid; gap: 5px; }
+  .finding:first-of-type { border-top: 0; padding-top: 0; }
+  .fhead { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .sev { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .sev.error { color: var(--bad); }
+  .sev.warning { color: var(--warn); }
+  .sev.info { color: var(--info); }
+  .fid { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+  .deduct { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11px; }
+  .ftitle { font-weight: 600; font-size: 12.5px; }
+  .fdetail { color: var(--muted); font-size: 12px; }
+  .sug { font-size: 12px; background: var(--panel-2); border-radius: 8px; padding: 7px 9px; border-left: 2px solid var(--accent); }
+  .anchors { display: flex; flex-wrap: wrap; gap: 5px; }
+  .anchor { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); background: var(--panel-2); padding: 1px 6px; border-radius: 5px; }
+  .tiny { font-size: 11px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 12px; padding: 6px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .file { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .file:first-of-type { border-top: 0; }
+  .fname { font: 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+  .badge { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .badge.written { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+  .badge.skipped { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+  .badge.refused { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+  details { border-top: 1px solid var(--line); padding: 7px 0; }
+  details summary { cursor: pointer; font-size: 12px; }
+  ol.questions { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); display: grid; gap: 3px; }
+  footer { padding: 10px 14px 16px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+  .note { font-size: 11.5px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 9px; }
+  .loading { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 12px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite ease-in-out; }
+  @keyframes pulse { 0%,100% { opacity: .3 } 50% { opacity: 1 } }
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 8px 14px; border-radius: 10px; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 20; }
+  .toast.show { opacity: 1; }
+  .lang { font-size: 11px; padding: 4px 8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path>
+        </svg>
+      </span>
+      <span>GEO / SEO</span>
+    </div>
+    <div class="spacer"></div>
+    <button class="lang" id="langBtn" type="button">EN</button>
+    <button type="button" id="refreshBtn" title="Re-scan">&#8635;</button>
+  </header>
+
+  <div class="pathbar">
+    <input id="dirInput" type="text" spellcheck="false" placeholder="/path/to/project" aria-label="Project directory" />
+    <button class="primary" id="scanBtn" type="button">Scan</button>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="overview">Overview</button>
+    <button role="tab" aria-selected="false" data-tab="deductions">Deductions</button>
+    <button role="tab" aria-selected="false" data-tab="assets">Assets</button>
+    <button role="tab" aria-selected="false" data-tab="reach">Reachability</button>
+    <button role="tab" aria-selected="false" data-tab="monitor">Monitor</button>
+  </nav>
+
+  <main id="main"></main>
+  <footer id="footer">Local and offline by default. Scores describe retrievability and structure, never a ranking, traffic or citation outcome.</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const STRINGS = {
+    en: {
+      scan: "Scan", refresh: "Re-scan", overview: "Overview", deductions: "Deductions",
+      assets: "Assets", reach: "Reachability", monitor: "Monitor",
+      total: "total", errors: "errors", warnings: "warnings", infos: "infos",
+      documents: "documents", files: "files", ms: "ms", rulePack: "rule pack",
+      dimensions: "Dimensions", topFindings: "Top deductions", advisories: "Advisories (not scored)",
+      nothing: "No deductions here. The rule pack found nothing to remove.",
+      suggest: "Rewrite", why: "Why this weight",
+      generate: "Generate assets", dryRun: "Dry run", overwrite: "Overwrite",
+      verification: "Consistency check", verified: "facts verified", mismatches: "mismatches",
+      audit: "Run reachability audit", intl: "International engines", domestic: "Domestic engines",
+      history: "Check history", monitorHistory: "Monitoring samples", mentionRate: "Mention rate",
+      citationRate: "Citation rate", samples: "samples", insufficient: "Sample is too small for a trend claim — treat these numbers as observations, not statistics.",
+      platforms: "By platform", questions: "Question library", trend: "Trend",
+      noHistory: "No history yet for this directory.", noMonitor: "No monitoring runs recorded yet.",
+      scanning: "Scanning…", failed: "Request failed", done: "Done", never: "never",
+      placeholder: "Project directory (absolute path)", openHint: "Tip: run the same checks from a terminal with",
+      bandExcellent: "Excellent", bandGood: "Good", bandFair: "Fair", bandPoor: "Poor",
+      capped: "A blocking compliance finding caps the total score", generated: "generated",
+      written: "written", skipped: "skipped", refused: "refused",
+      dimensionsHint: "Weighted by the PRD: 28/22/18/10/12/7/3."
+    },
+    zh: {
+      scan: "扫描", refresh: "重新扫描", overview: "总览", deductions: "扣分明细",
+      assets: "资产生成", reach: "可抓取性", monitor: "可见性监测",
+      total: "总分", errors: "错误", warnings: "警告", infos: "提示",
+      documents: "文档", files: "文件", ms: "毫秒", rulePack: "规则包",
+      dimensions: "分维度得分", topFindings: "主要扣分项", advisories: "排版建议（不计分）",
+      nothing: "此维度没有扣分。",
+      suggest: "改写建议", why: "实证权重说明",
+      generate: "生成资产文件", dryRun: "仅预览", overwrite: "覆盖已有文件",
+      verification: "一致性校验", verified: "条事实已核对", mismatches: "处不一致",
+      audit: "运行可抓取性审计", intl: "国际引擎", domestic: "国内引擎",
+      history: "历史得分", monitorHistory: "监测采样", mentionRate: "提及率",
+      citationRate: "引用率", samples: "样本", insufficient: "样本量不足，暂不构成趋势结论——这些数字只是观察记录，不是统计结果。",
+      platforms: "按平台", questions: "问题库", trend: "趋势",
+      noHistory: "该目录还没有历史记录。", noMonitor: "还没有监测采样记录。",
+      scanning: "扫描中…", failed: "请求失败", done: "完成", never: "从未",
+      placeholder: "项目目录（绝对路径）", openHint: "提示：终端里可运行",
+      bandExcellent: "优秀", bandGood: "良好", bandFair: "一般", bandPoor: "较差",
+      capped: "命中否决项，总分上限被压至 60", generated: "生成于",
+      written: "已写入", skipped: "已跳过", refused: "已拒绝",
+      dimensionsHint: "按 PRD 固定权重：28/22/18/10/12/7/3。"
+    }
+  };
+
+  const state = {
+    lang: (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en",
+    dir: localStorage.getItem("dsh-geo-seo.dir") || "",
+    tab: "overview",
+    check: null,
+    audit: null,
+    generate: null,
+    monitor: null,
+    questions: null,
+    busy: false,
+    error: "",
+  };
+
+  const apiBase = (() => {
+    const url = new URL(location.href);
+    url.search = "";
+    url.hash = "";
+    const path = url.pathname.replace(/panel\/?$/, "");
+    return url.origin + path;
+  })();
+
+  const t = (key) => (STRINGS[state.lang] && STRINGS[state.lang][key]) || STRINGS.en[key] || key;
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function toast(message) {
+    const el = document.getElementById("toast");
+    el.textContent = message;
+    el.classList.add("show");
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+
+  async function call(path, body) {
+    const init = body === undefined
+      ? { headers: { accept: "application/json" } }
+      : { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(body) };
+    const response = await fetch(apiBase + path, init);
+    let payload = null;
+    try { payload = await response.json(); } catch (_) { payload = null; }
+    if (!response.ok || !payload || payload.ok !== true) {
+      const detail = payload && payload.error ? payload.error : "HTTP " + response.status;
+      throw new Error(detail);
+    }
+    return payload.value;
+  }
+
+  function bandKey(band) {
+    if (band === "excellent") return "bandExcellent";
+    if (band === "good") return "bandGood";
+    if (band === "fair") return "bandFair";
+    return "bandPoor";
+  }
+
+  function bandColor(band) {
+    if (band === "excellent" || band === "good") return "var(--ok)";
+    if (band === "fair") return "var(--warn)";
+    return "var(--bad)";
+  }
+
+  function ring(score, band) {
+    const radius = 44;
+    const circumference = 2 * Math.PI * radius;
+    const ratio = Math.max(0, Math.min(1, score / 100));
+    const dash = (circumference * ratio).toFixed(2);
+    const color = bandColor(band);
+    return '<div class="ring"><svg viewBox="0 0 104 104" aria-hidden="true">'
+      + '<circle cx="52" cy="52" r="' + radius + '" fill="none" stroke="var(--panel-2)" stroke-width="9" />'
+      + '<circle cx="52" cy="52" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="9" stroke-linecap="round" '
+      + 'stroke-dasharray="' + dash + ' ' + circumference.toFixed(2) + '" />'
+      + '</svg><div class="val"><div><b>' + score.toFixed(1) + '</b><span>/ 100</span></div></div></div>';
+  }
+
+  function anchorText(anchor) {
+    if (!anchor || !anchor.file) return "";
+    let text = anchor.file;
+    if (typeof anchor.line === "number") text += ":" + anchor.line;
+    return text;
+  }
+
+  function renderFinding(finding, compact) {
+    const sev = String(finding.severity || "info");
+    const parts = [];
+    parts.push('<div class="finding">');
+    parts.push('<div class="fhead"><span class="sev ' + esc(sev) + '">' + esc(sev) + '</span>'
+      + '<span class="fid">' + esc(finding.ruleId) + '</span>'
+      + (finding.gate ? '<span class="chip err">gate</span>' : '')
+      + '<span class="deduct">-' + Number(finding.deduction || 0).toFixed(1) + '</span></div>');
+    parts.push('<div class="ftitle">' + esc(finding.title) + '</div>');
+    if (finding.detail) parts.push('<div class="fdetail">' + esc(finding.detail) + '</div>');
+    if (finding.suggestion) parts.push('<div class="sug"><b>' + t("suggest") + ':</b> ' + esc(finding.suggestion) + '</div>');
+    const anchors = Array.isArray(finding.anchors) ? finding.anchors.filter((a) => a && a.file) : [];
+    if (anchors.length > 0) {
+      parts.push('<div class="anchors">' + anchors.slice(0, 6).map((a) => '<span class="anchor">' + esc(anchorText(a)) + '</span>').join("") + '</div>');
+    }
+    if (!compact && finding.rationale) {
+      parts.push('<details><summary>' + t("why") + '</summary><div class="tiny">' + esc(finding.rationale) + ' · ' + esc(finding.evidence || "") + '</div></details>');
+    }
+    parts.push('</div>');
+    return parts.join("");
+  }
+
+  function renderOverview() {
+    const data = state.check;
+    if (!data) return '<div class="card"><div class="empty">' + t("noHistory") + '</div></div>';
+    const report = data.report;
+    const summary = report.summary;
+    const findings = (report.findings || []).slice(0, 4);
+    const advisories = report.advisories || [];
+    const dims = (report.dimensions || []).map((dim) => {
+      const ratio = dim.weight > 0 ? dim.score / dim.weight : 0;
+      const cls = ratio >= 0.85 ? "" : ratio >= 0.6 ? " mid" : " low";
+      return '<div class="dimRow"><span class="dimName">' + esc(dim.label) + '</span>'
+        + '<span class="dimNum">' + dim.score.toFixed(1) + ' / ' + dim.weight + '</span>'
+        + '<span class="track"><span class="fill' + cls + '" style="display:block;width:' + (ratio * 100).toFixed(1) + '%"></span></span></div>';
+    }).join("");
+
+    return ''
+      + '<section class="card">'
+      + '<div class="scoreRow">' + ring(summary.total, summary.band)
+      + '<div class="scoreMeta"><div class="band" style="color:' + bandColor(summary.band) + '">' + t(bandKey(summary.band)) + '</div>'
+      + '<div class="chips">'
+      + (summary.errors ? '<span class="chip err">' + summary.errors + ' ' + t("errors") + '</span>' : '')
+      + (summary.warnings ? '<span class="chip warn">' + summary.warnings + ' ' + t("warnings") + '</span>' : '')
+      + (summary.infos ? '<span class="chip">' + summary.infos + ' ' + t("infos") + '</span>' : '')
+      + '<span class="chip">' + summary.documents + ' ' + t("documents") + '</span>'
+      + '<span class="chip">' + summary.filesScanned + ' ' + t("files") + '</span>'
+      + '<span class="chip">' + summary.durationMs + ' ' + t("ms") + '</span>'
+      + '</div>'
+      + '<div class="tiny">' + esc(report.target && report.target.dir ? report.target.dir : "") + '</div>'
+      + '<div class="tiny">' + t("total") + ' · ' + t("rulePack") + ' ' + esc(report.rulePackVersion) + ' · ' + t("generated") + ' ' + esc((report.generatedAt || "").replace("T", " ").slice(0, 19)) + '</div>'
+      + '</div></div>'
+      + (report.capReason ? '<div class="cap" style="margin-top:10px">' + esc(report.capReason) + '</div>' : '')
+      + '</section>'
+      + '<section class="card"><h2>' + t("dimensions") + '</h2><div class="dim">' + dims + '</div>'
+      + '<div class="tiny" style="margin-top:8px">' + t("dimensionsHint") + '</div></section>'
+      + '<section class="card"><h2>' + t("topFindings") + '</h2>'
+      + (findings.length ? findings.map((f) => renderFinding(f, true)).join("") : '<div class="empty">' + t("nothing") + '</div>')
+      + '</section>'
+      + (advisories.length ? '<section class="card"><h2>' + t("advisories") + '</h2>'
+        + advisories.slice(0, 5).map((a) => '<div class="finding"><div class="fhead"><span class="sev info">' + esc(a.severity) + '</span><span class="fid">' + esc(a.ruleId) + '</span></div>'
+          + '<div class="ftitle">' + esc(a.title) + '</div><div class="fdetail">' + esc(a.suggestion || a.detail || "") + '</div></div>').join("")
+        + '</section>' : '')
+      + renderHistoryCard();
+  }
+
+  function renderHistoryCard() {
+    const history = state.check && Array.isArray(state.check.history) ? state.check.history : [];
+    if (history.length === 0) return '';
+    const rows = history.slice(-8).reverse().map((entry) =>
+      '<tr><td>' + esc((entry.at || "").replace("T", " ").slice(0, 16)) + '</td>'
+      + '<td class="num">' + Number(entry.total).toFixed(1) + '</td>'
+      + '<td>' + esc(t(bandKey(entry.band))) + '</td>'
+      + '<td class="num">' + entry.errors + '/' + entry.warnings + '</td></tr>').join("");
+    return '<section class="card"><h2>' + t("history") + '</h2><table><thead><tr><th>at</th><th class="num">score</th><th>band</th><th class="num">e/w</th></tr></thead><tbody>' + rows + '</tbody></table></section>';
+  }
+
+  function renderDeductions() {
+    if (!state.check) return '<div class="card"><div class="empty">' + t("noHistory") + '</div></div>';
+    const dims = state.check.report.dimensions || [];
+    const sections = dims.map((dim) => {
+      const findings = dim.findings || [];
+      if (findings.length === 0) {
+        return '<section class="card"><h2>' + esc(dim.label) + ' · ' + dim.score.toFixed(1) + '/' + dim.weight + '</h2><div class="empty">' + t("nothing") + '</div></section>';
+      }
+      return '<section class="card"><h2>' + esc(dim.label) + ' · ' + dim.score.toFixed(1) + '/' + dim.weight + ' · -' + Number(dim.deducted || 0).toFixed(1) + '</h2>'
+        + findings.map((f) => renderFinding(f, false)).join("") + '</section>';
+    }).join("");
+    const errors = (state.check.report.parseErrors || []);
+    const errorBlock = errors.length
+      ? '<section class="card"><h2>parse errors</h2>' + errors.map((e) => '<div class="finding"><div class="ftitle">' + esc(e.file) + '</div><div class="fdetail">' + esc(e.message) + '</div></div>').join("") + '</section>'
+      : '';
+    return sections + errorBlock;
+  }
+
+  function renderAssets() {
+    const result = state.generate;
+    const controls = '<section class="card"><h2>' + t("assets") + '</h2>'
+      + '<div class="toolbar">'
+      + '<button type="button" data-action="generate" data-mode="dry">' + t("dryRun") + '</button>'
+      + '<button class="primary" type="button" data-action="generate" data-mode="write">' + t("generate") + '</button>'
+      + '<label class="tiny"><input type="checkbox" id="forceBox" /> ' + t("overwrite") + '</label>'
+      + '</div><div class="note" style="margin-top:9px">llms.txt · llms-full.txt · ai.txt · structured-data.jsonld</div></section>';
+    if (!result) return controls + '<section class="card"><div class="empty">—</div></section>';
+    const files = (result.files || []).map((file) => {
+      const status = file.written ? (result.dryRun ? "skipped" : "written") : (file.reason && /refus|block|claim/i.test(file.reason) ? "refused" : "skipped");
+      return '<div class="file"><span class="fname">' + esc(file.path) + '</span><span class="badge ' + status + '">' + t(status) + '</span>'
+        + '<span class="tiny">' + (file.bytes || 0) + ' B' + (file.reason ? ' · ' + esc(file.reason) : '') + '</span><span></span></div>';
+    }).join("");
+    const verify = result.verification || { ok: false, checkedFacts: 0, mismatches: [] };
+    const mismatches = (verify.mismatches || []).map((m) => '<div class="finding"><div class="fhead"><span class="sev warning">' + esc(m.kind) + '</span></div>'
+      + '<div class="ftitle">' + esc(m.claim) + '</div><div class="fdetail">' + esc(m.evidence) + '</div></div>').join("");
+    return controls
+      + '<section class="card"><h2>' + t("verification") + '</h2>'
+      + (verify.ok ? '<span class="chip ok">ok · ' + verify.checkedFacts + ' ' + t("verified") + '</span>' : '<span class="chip err">' + t("mismatches") + ': ' + (verify.mismatches || []).length + '</span>')
+      + mismatches + '</section>'
+      + '<section class="card"><h2>' + (result.dryRun ? t("dryRun") : t("generate")) + '</h2>' + files + '</section>';
+  }
+
+  function renderReach() {
+    if (!state.audit) {
+      return '<section class="card"><h2>' + t("reach") + '</h2><div class="toolbar">'
+        + '<button class="primary" type="button" data-action="audit">' + t("audit") + '</button>'
+        + '</div></section>';
+    }
+    const result = state.audit;
+    const group = (scope, label) => {
+      const findings = (result.findings || []).filter((f) => f.scope === scope);
+      const body = findings.length
+        ? findings.map((f) => renderFinding({ ruleId: f.ruleId, severity: f.severity, deduction: 0, title: f.title, detail: f.detail, suggestion: f.suggestion, anchors: f.anchors, rationale: f.evidence, evidence: f.evidence }, false)).join("")
+        : '<div class="empty">' + t("nothing") + '</div>';
+      return '<section class="card"><h2>' + label + '</h2>' + body + '</section>';
+    };
+    const notes = (result.notes || []).map((n) => '<div class="note" style="margin-top:6px">' + esc(n) + '</div>').join("");
+    return group("international", t("intl")) + group("domestic", t("domestic"))
+      + '<section class="card"><h2>notes</h2>' + notes + '</section>';
+  }
+
+  function sparkline(history) {
+    if (!history || history.length < 2) return "";
+    const width = 260, height = 60, pad = 4;
+    const values = history.map((h) => Number(h.total) || 0);
+    const min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    const span = Math.max(1, max - min);
+    const points = values.map((value, index) => {
+      const x = pad + (index * (width - pad * 2)) / (values.length - 1);
+      const y = height - pad - ((value - min) / span) * (height - pad * 2);
+      return x.toFixed(1) + "," + y.toFixed(1);
+    }).join(" ");
+    return '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="' + height + '" preserveAspectRatio="none" aria-hidden="true">'
+      + '<polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" points="' + points + '" /></svg>';
+  }
+
+  function renderMonitor() {
+    const history = state.check && Array.isArray(state.check.history) ? state.check.history : [];
+    const data = state.monitor;
+    const questions = state.questions;
+    const spark = sparkline(history);
+    let monitorBody = '<div class="empty">' + t("noMonitor") + '</div>';
+    if (data && data.summary) {
+      const summary = data.summary;
+      const rate = (value) => (value === null || value === undefined ? "—" : (Number(value) * 100).toFixed(1) + "%");
+      const platforms = (summary.platforms || []).map((p) =>
+        '<tr><td>' + esc(p.platform) + '</td><td class="num">' + p.samples + '</td><td class="num">' + p.mentions + '</td><td class="num">' + p.citations + '</td></tr>').join("");
+      const trend = (summary.trend || []).slice().reverse().map((point) =>
+        '<tr><td>' + esc((point.at || "").replace("T", " ").slice(0, 16)) + '</td>'
+        + '<td class="num">' + rate(point.mentionRate) + '</td><td class="num">' + rate(point.citationRate) + '</td></tr>').join("");
+      monitorBody = '<div class="chips" style="margin-bottom:8px">'
+        + '<span class="chip">' + summary.samples + ' ' + t("samples") + '</span>'
+        + '<span class="chip">' + t("mentionRate") + ' ' + rate(summary.mentionRate) + '</span>'
+        + '<span class="chip">' + t("citationRate") + ' ' + rate(summary.citationRate) + '</span></div>'
+        + (summary.insufficientSample ? '<div class="cap" style="margin-bottom:8px">' + t("insufficient") + '</div>' : '')
+        + (platforms ? '<h2>' + t("platforms") + '</h2><table><thead><tr><th>platform</th><th class="num">n</th><th class="num">mention</th><th class="num">cite</th></tr></thead><tbody>' + platforms + '</tbody></table>' : '')
+        + (trend ? '<h2 style="margin-top:12px">' + t("trend") + '</h2><table><thead><tr><th>at</th><th class="num">' + t("mentionRate") + '</th><th class="num">' + t("citationRate") + '</th></tr></thead><tbody>' + trend + '</tbody></table>' : '');
+    }
+    const questionList = questions
+      ? '<details><summary>' + t("questions") + ' (' + questions.questions.length + ')</summary><ol class="questions">'
+        + questions.questions.map((q) => '<li>' + esc(q.text) + '</li>').join("") + '</ol></details>'
+      : '';
+    return '<section class="card"><h2>' + t("history") + '</h2>' + (spark || '<div class="empty">' + t("noHistory") + '</div>') + '</section>'
+      + '<section class="card"><h2>' + t("monitorHistory") + '</h2>' + monitorBody + '</section>'
+      + '<section class="card">' + questionList + '<div class="note" style="margin-top:6px">' + t("openHint") + ' <code>geo-seo monitor --answers answers.json --platform &lt;name&gt;</code></div></section>';
+  }
+
+  function render() {
+    document.getElementById("dirInput").value = state.dir;
+    document.getElementById("langBtn").textContent = state.lang === "zh" ? "EN" : "中文";
+    document.querySelectorAll("nav.tabs button").forEach((button) => {
+      const isActive = button.dataset.tab === state.tab;
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.textContent = t(button.dataset.tab === "reach" ? "reach" : button.dataset.tab);
+    });
+    const main = document.getElementById("main");
+    if (state.error) {
+      main.innerHTML = '<section class="card"><div class="cap">' + esc(state.error) + '</div></section>' + currentTabView();
+    } else {
+      main.innerHTML = currentTabView();
+    }
+    const scanBtn = document.getElementById("scanBtn");
+    scanBtn.disabled = state.busy;
+    scanBtn.textContent = state.busy ? t("scanning") : t("scan");
+    const generateButtons = main.querySelectorAll('[data-action="generate"]');
+    generateButtons.forEach((button) => { button.disabled = state.busy; });
+  }
+
+  function currentTabView() {
+    if (state.busy && !state.check && state.tab === "overview") {
+      return '<section class="card"><div class="loading"><span class="dot"></span>' + t("scanning") + '</div></section>';
+    }
+    if (state.tab === "overview") return renderOverview();
+    if (state.tab === "deductions") return renderDeductions();
+    if (state.tab === "assets") return renderAssets();
+    if (state.tab === "reach") return renderReach();
+    return renderMonitor();
+  }
+
+  async function runCheck() {
+    const dir = document.getElementById("dirInput").value.trim();
+    if (dir === "") return;
+    state.dir = dir;
+    localStorage.setItem("dsh-geo-seo.dir", dir);
+    state.busy = true;
+    state.error = "";
+    render();
+    try {
+      state.check = await call("check", { dir });
+      try { state.monitor = await call("monitor?dir=" + encodeURIComponent(dir)); } catch (_) { state.monitor = null; }
+    } catch (error) {
+      state.error = t("failed") + ": " + error.message;
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function loadState() {
+    try {
+      const value = await call("state");
+      if (!state.dir && value && value.target) state.dir = value.target;
+    } catch (_) { /* the first check will surface the real error */ }
+  }
+
+  document.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.dataset.tab) {
+      state.tab = target.dataset.tab;
+      render();
+      if (state.tab === "monitor" && !state.questions) {
+        try { state.questions = await call("questions"); } catch (_) { state.questions = null; }
+        render();
+      }
+      return;
+    }
+    if (target.id === "scanBtn" || target.id === "refreshBtn") { void runCheck(); return; }
+    if (target.id === "langBtn") {
+      state.lang = state.lang === "zh" ? "en" : "zh";
+      localStorage.setItem("dsh-geo-seo.lang", state.lang);
+      render();
+      return;
+    }
+    const action = target.dataset.action;
+    if (action === "generate") {
+      const force = document.getElementById("forceBox");
+      state.busy = true; state.error = ""; render();
+      try {
+        state.generate = await call("generate", { dir: state.dir, dryRun: target.dataset.mode === "dry", force: force ? force.checked : false });
+      } catch (error) { state.error = t("failed") + ": " + error.message; }
+      finally { state.busy = false; render(); }
+      return;
+    }
+    if (action === "audit") {
+      state.busy = true; state.error = ""; render();
+      try { state.audit = await call("audit", { dir: state.dir }); }
+      catch (error) { state.error = t("failed") + ": " + error.message; }
+      finally { state.busy = false; render(); }
+    }
+  });
+
+  document.getElementById("dirInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); void runCheck(); }
+  });
+
+  const savedLang = localStorage.getItem("dsh-geo-seo.lang");
+  if (savedLang === "zh" || savedLang === "en") state.lang = savedLang;
+
+  void (async () => { await loadState(); render(); if (state.dir) await runCheck(); else render(); })();
+})();
+</script>
+</body>
+</html>

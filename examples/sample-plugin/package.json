@@ -1,0 +1,31 @@
+{
+  "name": "sample-plugin",
+  "version": "1.2.3",
+  "description": "A deterministic word counter for the DeepSeek Harness composer",
+  "keywords": [
+    "dsh",
+    "plugin",
+    "word count",
+    "text"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Example Maintainers",
+    "url": "https://example.com/sample-plugin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/sample-plugin.git"
+  },
+  "homepage": "https://example.com/sample-plugin",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

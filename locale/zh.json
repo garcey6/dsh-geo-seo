@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "title": "GEO 健康度体检",
+    "description": "评估 DSH 插件仓库对生成式搜索引擎的友好程度：把文档、元数据与源码解析成事实图，按加权规则给出带文件与行号锚点的扣分明细，生成必须与可见正文一致的 llms.txt / ai.txt / JSON-LD，并在本地离线保存历史记录。",
+    "detail": "docs/DETAIL.zh.md"
+  },
+  "tools": {
+    "check": "运行 GEO 健康度体检",
+    "generate": "生成 llms.txt、ai.txt 与 JSON-LD",
+    "audit": "检查面向国际与国内 AI 引擎的可抓取性",
+    "monitor": "记录或读取可见性监测历史",
+    "rules": "列出带版本号的规则包"
+  },
+  "panel": {
+    "title": "GEO 健康度体检"
+  }
+}

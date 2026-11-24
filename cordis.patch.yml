@@ -1,0 +1,6 @@
+# Bundle patch for dsh-geo-seo — inserts the plugin row into the DSH profile.
+# The row id is stable; `config` is validated by the plugin's exported Config.
+- insert:
+    - id: geo-seo
+      name: dsh-geo-seo
+      config: {}
