@@ -6,6 +6,7 @@
  * means the panel needs no Harness client packages, no bundler, and no JSX:
  * it only needs React to mount one node.
  */
+
 window.__ModuleLoader__.load({
   id: 'dsh-geo-seo',
   factory(require) {
@@ -14,6 +15,10 @@ window.__ModuleLoader__.load({
     const TAB_ID = 'dsh-geo-seo';
     const KIND = 'geo-seo';
     const PANEL_PATH = 'geo-seo/api/panel';
+    const BODY_SLOT = 'sidebar.right.pane.tab';
+    const TAB_TITLE = 'GEO / SEO';
+    const TAB_DESCRIPTION =
+      'Score the project, read the deductions, generate assets and watch the trend.';
 
     /** Resolve the panel URL against the document base, never the origin root. */
     function panelUrl() {
@@ -36,46 +41,63 @@ window.__ModuleLoader__.load({
     function PanelFrame() {
       return React.createElement('iframe', {
         src: panelUrl(),
-        title: 'GEO / SEO',
+        title: TAB_TITLE,
         style: frameStyle,
         allow: 'clipboard-write',
       });
     }
 
-    const guideEntries = [
-      {
-        id: 'open',
-        title: 'GEO / SEO',
-        description: 'Score the project, read the deductions, generate assets and watch the trend.',
-      },
-    ];
+    /**
+     * One guide row, in the shape the host registry validates: `order` is a
+     * number, and both texts are thunks so they re-evaluate on a locale change.
+     * `id` is required and unique per provider since DSH 0.1.6-alpha.2; a
+     * duplicate throws `sidebarRight: duplicate guide entry id`.
+     */
+    function guideRows() {
+      return [
+        {
+          id: 'open',
+          order: 100,
+          title: function () {
+            return TAB_TITLE;
+          },
+          description: function () {
+            return TAB_DESCRIPTION;
+          },
+        },
+      ];
+    }
 
-    const definition = {
-      id: TAB_ID,
-      kind: KIND,
-      priority: 'extension',
-      keepMounted: true,
-      title: function title() {
-        return 'GEO / SEO';
-      },
-      guide: guideEntries,
-    };
+    /** The tab-type definition the registry accepts (see NativeTabRegistry). */
+    function definition() {
+      return {
+        id: TAB_ID,
+        kind: KIND,
+        priority: 'extension',
+        keepMounted: true,
+        title: function () {
+          return TAB_TITLE;
+        },
+        guide: guideRows(),
+      };
+    }
 
     /**
-     * Register the tab type, then the keyed body seat. If the host rejects the
-     * guide declaration (older contract), retry without it rather than losing
-     * the whole panel.
+     * Register the tab type. A host that predates the guide contract (or
+     * rejects one of its fields) must not cost the reader the whole panel, so
+     * the second attempt drops the guide and keeps the type.
      */
-    function registerTab(ctx) {
-      const registry = ctx.sidebarRightTabs;
-      if (!registry || typeof registry.register !== 'function') return undefined;
+    function registerTab(registry) {
       try {
-        return registry.register(definition);
+        return registry.register(definition());
       } catch (error) {
-        console.warn('[dsh-geo-seo] tab registration rejected, retrying without the guide entry', error);
+        console.warn(
+          '[dsh-geo-seo] tab registration was rejected, retrying without the guide entry',
+          error,
+        );
       }
       try {
-        const fallback = Object.assign({}, definition);
+        const fallback = definition();
         delete fallback.guide;
         return registry.register(fallback);
       } catch (error) {
@@ -85,20 +107,43 @@ window.__ModuleLoader__.load({
     }
 
     function apply(ctx) {
-      if (!ctx || !ctx.slots || typeof ctx.slots.register !== 'function') return;
-      if (typeof ctx.effect !== 'function') return;
-      ctx.effect(function registerPanel() {
+      if (!ctx || typeof ctx.inject !== 'function') return;
+      // Wait for the tab-type REGISTRY (a service), not for the slot
+      // declaration: the native seat declares 'sidebar.right.pane.tab' BEFORE
+      // it provides `sidebarRightTabs`, so a registration driven by the
+      // declaration reads the service as missing — and because the declaration
+      // never collapses, it registers nothing, permanently. `ctx.inject`
+      // re-runs this body whenever the service appears or reappears, which is
+      // the lifecycle both registrations need.
+      ctx.inject(['sidebarRightTabs', 'slots'], function (injected) {
+        const registry = injected.get('sidebarRightTabs');
+        if (!registry || typeof registry.register !== 'function') return;
+        const slots = injected.get('slots');
+        if (!slots || typeof slots.register !== 'function') return;
+
         const disposers = [];
-        const disposeTab = registerTab(ctx);
+        const disposeTab = registerTab(registry);
         if (typeof disposeTab === 'function') disposers.push(disposeTab);
         try {
-          const disposeBody = ctx.slots.inject('sidebar.right.pane.tab', function () {
-            return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: TAB_ID }, PanelFrame);
+          const disposeBody = slots.inject(BODY_SLOT, function () {
+            return slots.register(
+              {
+                name: BODY_SLOT,
+                // The key is the type id above: the surface looks the body up
+                // by the tab's implementation id.
+                key: TAB_ID,
+                inject: function () {
+                  return {};
+                },
+              },
+              PanelFrame,
+            );
           });
           if (typeof disposeBody === 'function') disposers.push(disposeBody);
         } catch (error) {
           console.warn('[dsh-geo-seo] panel body slot is unavailable', error);
         }
+
         return function dispose() {
           for (const dispose of disposers.reverse()) {
             try {
