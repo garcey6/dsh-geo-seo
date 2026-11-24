@@ -77,12 +77,10 @@ install it like any other bundle.
      Pages is enabled in **Settings → Pages → Source: GitHub Actions**; the deploy workflow
      cannot create the site itself, because `GITHUB_TOKEN` has no admin rights.
 
-2. The index installs **from git at a pinned commit**. A git source resolves to exactly
-   this tree — manifest, committed `dist/` and client entry all as reviewed — and never
-   depends on registry metadata or CDN caching. The index serves 0.2.0 from that commit.
-   The registry still holds 0.1.1, which installs as well (`npm install dsh-geo-seo`,
-   `engines.dsh: ">=0.2.2-rc.5"`); it predates the panel redesign, so the sidebar keeps
-   the 0.1.x layout until 0.2.0 is published to npm.
+2. The index installs **the published npm package**, `dsh-geo-seo@0.2.0`. The entry carries
+   the same `engines.dsh` the tarball declares, so the compatibility check the market runs
+   before installing agrees with what `npm install` resolves. The version was checked on a
+   clean install: 0.2.0 ships the rebuilt panel, the client entry and the CLI.
 
 3. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
@@ -104,8 +102,9 @@ pnpm refuses to run a git dependency's `prepare` script unless the installing pr
 allowlists it (`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`), and the DSH profile cannot be
 expected to carry an allowlist entry for this package. Nothing is compiled at install time.
 
-The market entry uses the same tree, pinned to a commit:
-`git+https://github.com/garcey6/dsh-geo-seo.git#<40-hex sha>`.
+The market entry prefers the published package; `scripts/build-market-index.mjs --source git`
+can list a commit-pinned tree instead — `git+https://github.com/garcey6/dsh-geo-seo.git#<40-hex sha>` —
+which is how an unreleased build is validated against the market.
 
 ### From a checkout of this repository
 
@@ -313,4 +312,3 @@ Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0
 ## License
 
 MIT.
-

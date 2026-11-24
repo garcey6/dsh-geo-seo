@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Builds market/index.json, the format-1 plugin market index that lists this package.
 //
-// The listed version installs from git at a pinned commit, not from the npm registry:
-// the published 0.1.0 tarball carries a wrong engines.dsh and cannot be replaced, and
-// a commit-pinned git source installs exactly this tree, whose engines.dsh and built
-// dist/ are already correct. Switch a version back to npm only after publishing it.
+// The listed version installs from npm, exactly like 'npm install dsh-geo-seo@<version>':
+// the tarball carries the built dist/ and the engines.dsh this index advertises, and a
+// published version cannot be replaced, so the entry stays honest by construction.
+// Pass --source git to list a commit-pinned tree instead (used while a version is still
+// unpublished, e.g. when validating a build against the market before releasing it).
 //
-// Usage: node ./scripts/build-market-index.mjs [--commit <sha>] [--timestamp <unixSeconds>]
+// Usage: node ./scripts/build-market-index.mjs [--source npm|git] [--commit <sha>] [--timestamp <unixSeconds>]
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -23,8 +24,14 @@ const flag = (name) => {
 };
 const git = (args) => execFileSync('git', args, { cwd: packageRoot, encoding: 'utf8' }).trim();
 
+const source = flag('--source') ?? 'npm';
+if (source !== 'npm' && source !== 'git') {
+  console.error('--source must be "npm" or "git", got: ' + source);
+  process.exit(2);
+}
+
 const commit = flag('--commit') ?? git(['rev-parse', 'HEAD']);
-if (!/^[0-9a-f]{40}$/.test(commit)) {
+if (source === 'git' && !/^[0-9a-f]{40}$/.test(commit)) {
   console.error('commit must be a lowercase 40-hex commit SHA, got: ' + commit);
   process.exit(2);
 }
@@ -85,7 +92,9 @@ const index = {
         {
           version: pkg.version,
           publishTimestamp,
-          source: { type: 'git', url: repository + '.git', commit },
+          source: source === 'npm'
+            ? { type: 'npm' }
+            : { type: 'git', url: repository + '.git', commit },
           engines: { dsh: enginesDsh },
         },
       ],
@@ -97,4 +106,4 @@ mkdirSync(path.join(packageRoot, 'market'), { recursive: true });
 const target = path.join(packageRoot, 'market', 'index.json');
 writeFileSync(target, JSON.stringify(index, null, 2) + '\n');
 console.log('wrote ' + path.relative(packageRoot, target) + ' for ' + pkg.name + '@' + pkg.version
-  + ' (git ' + commit.slice(0, 7) + ', publishTimestamp ' + publishTimestamp + ')');
+  + ' (' + source + (source === 'git' ? ' ' + commit.slice(0, 7) : '') + ', publishTimestamp ' + publishTimestamp + ')');

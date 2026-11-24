@@ -40,6 +40,11 @@ equal tabs, no path to type, and every deduction now carries a prompt you can pa
   values, length bounds, every rule has both templates) and `test/panel.test.ts` (one
   vertical page, hidden text field, prompt copy button, dictionary parity, no absolute
   path, script parses as-is). Host and audit tests cover the new endpoints and checks.
+- Release: published to npm as `latest` (`npm view dsh-geo-seo version` answers 0.2.0) and
+  the market index now lists that tarball as an `npm` source instead of a git commit, so the
+  installed bytes are the ones the registry serves and the advertised `engines.dsh` is the
+  one the tarball declares.
+
 ## 0.1.1 - 2026-11-24
 
 Published to npm on 2026-11-24 as `latest`; `npm view dsh-geo-seo version` answers 0.1.1.

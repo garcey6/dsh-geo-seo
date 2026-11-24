@@ -28,14 +28,13 @@ test('the indexed version matches package.json', () => {
   assert.ok(Number.isInteger(version.publishTimestamp) && version.publishTimestamp > 0);
 });
 
-test('the indexed version installs from git at a pinned commit', () => {
+test('the indexed version installs the published npm package', () => {
   const [version] = index.plugins[0].versions;
-  // The published npm tarball cannot be corrected, so the market entry installs the
-  // repository tree instead: a commit-pinned source is the only mutable-free option.
-  assert.equal(version.source.type, 'git');
-  assert.equal(version.source.url, 'https://github.com/garcey6/dsh-geo-seo.git');
-  assert.match(version.source.commit, /^[0-9a-f]{40}$/, 'a git source must pin a lowercase 40-hex commit');
-  assert.equal(version.source.path, undefined, 'the package sits at the repository root');
+  // The market resolves an npm entry to name@version, so the tree it installs is the
+  // immutable tarball whose engines.dsh this index advertises.
+  assert.equal(version.source.type, 'npm');
+  assert.match(version.version, /^\d+\.\d+\.\d+/, 'an npm source must name a concrete version');
+  assert.equal(version.source.registry, undefined, 'the default registry needs no override');
 });
 
 test('the market icon travels inside the index', () => {
