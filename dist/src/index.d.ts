@@ -2,19 +2,50 @@
 export declare const name = "dsh-geo-seo";
 /**
  * Services this plugin needs. The web server is required for the panel; the
- * tools service is optional (a headless host may not expose one).
+ * tools registry is optional (a headless host may not expose one), so it is
+ * read through `ctx.reflect.get` instead of being injected — cordis throws on
+ * `ctx.<name>` reads for services that are not declared.
  */
 export declare const inject: string[];
+/** One node of the enforced JSON Schema subset the host accepts. */
+interface JsonSchemaNode {
+    type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
+    properties?: Record<string, JsonSchemaNode>;
+    required?: string[];
+    additionalProperties?: boolean;
+    items?: JsonSchemaNode;
+    enum?: Array<string | number | boolean | null>;
+    description?: string;
+    title?: string;
+}
+/** The definition shape tools.register() consumes: raw JSON Schema, not a shorthand map. */
+interface ToolDefinition {
+    name: string;
+    description: string;
+    parameters: JsonSchemaNode;
+    output: {
+        schema: JsonSchemaNode;
+        render: (args: any, value: any) => Array<{
+            type: 'text';
+            text: string;
+        }>;
+    };
+    isConcurrencySafe?: (args: any) => boolean;
+    execute: (args: any, exec: any) => Promise<unknown>;
+}
+interface WebRouteRegistration {
+    kind: 'prefix' | 'exact';
+    path: string;
+    handler: (req: HostRequest, res: HostResponse) => void | Promise<void>;
+}
+/** The slice of the host tool registry this plugin uses. */
+type ToolRegistrar = (definition: ToolDefinition) => () => void;
 interface HostContext {
     webServer?: {
-        register?: (route: {
-            kind: 'prefix' | 'exact';
-            path: string;
-            handler: (req: HostRequest, res: HostResponse) => void | Promise<void>;
-        }) => () => void;
+        register?: (route: WebRouteRegistration) => () => void;
     };
     tools?: {
-        register?: (definition: unknown) => () => void;
+        register?: ToolRegistrar;
     };
     effect?: (fn: () => (() => void) | void) => void;
     logger?: (name: string) => {

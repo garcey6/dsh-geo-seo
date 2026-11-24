@@ -32,9 +32,27 @@ export const name = 'dsh-geo-seo';
 
 /**
  * Services this plugin needs. The web server is required for the panel; the
- * tools service is optional (a headless host may not expose one).
+ * tools registry is optional (a headless host may not expose one), so it is
+ * read through `ctx.reflect.get` instead of being injected — cordis throws on
+ * `ctx.<name>` reads for services that are not declared.
  */
 export const inject = ['webServer'];
+
+/**
+ * Read a service that may legitimately be absent. `ctx.<name>` reads throw for
+ * services the plugin did not declare, so optional ones go through the reflect
+ * service, which returns undefined instead (strict = false: value from a
+ * providing fiber that is not active yet still counts).
+ */
+function readOptionalService(ctx: HostContext, name: string): unknown {
+  const reflect = (ctx as { reflect?: { get?: (key: string, strict?: boolean) => unknown } }).reflect;
+  if (typeof reflect?.get !== 'function') return undefined;
+  try {
+    return reflect.get(name, false);
+  } catch {
+    return undefined;
+  }
+}
 
 /** Route prefix the sidebar panel talks to. */
 const ROUTE_PREFIX = '/geo-seo/api';
@@ -45,11 +63,45 @@ const KNOWN_ENDPOINTS = new Set(['/state', '/panel', '/monitor', '/questions', '
 /** Absolute paths the panel may scan, one per process (path-escape guard). */
 const MAX_BODY_BYTES = 64 * 1024;
 
+/** One node of the enforced JSON Schema subset the host accepts. */
+interface JsonSchemaNode {
+  type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
+  properties?: Record<string, JsonSchemaNode>;
+  required?: string[];
+  additionalProperties?: boolean;
+  items?: JsonSchemaNode;
+  enum?: Array<string | number | boolean | null>;
+  description?: string;
+  title?: string;
+}
+
+/** The definition shape tools.register() consumes: raw JSON Schema, not a shorthand map. */
+interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: JsonSchemaNode;
+  output: {
+    schema: JsonSchemaNode;
+    render: (args: any, value: any) => Array<{ type: 'text'; text: string }>;
+  };
+  isConcurrencySafe?: (args: any) => boolean;
+  execute: (args: any, exec: any) => Promise<unknown>;
+}
+
+interface WebRouteRegistration {
+  kind: 'prefix' | 'exact';
+  path: string;
+  handler: (req: HostRequest, res: HostResponse) => void | Promise<void>;
+}
+
+/** The slice of the host tool registry this plugin uses. */
+type ToolRegistrar = (definition: ToolDefinition) => () => void;
+
 interface HostContext {
   webServer?: {
-    register?: (route: { kind: 'prefix' | 'exact'; path: string; handler: (req: HostRequest, res: HostResponse) => void | Promise<void> }) => () => void;
+    register?: (route: WebRouteRegistration) => () => void;
   };
-  tools?: { register?: (definition: unknown) => () => void };
+  tools?: { register?: ToolRegistrar };
   effect?: (fn: () => (() => void) | void) => void;
   logger?: (name: string) => { warn?: (msg: string) => void; info?: (msg: string) => void };
 }
@@ -165,10 +217,13 @@ function generateFor(dir: string, body: Record<string, unknown>): GenerateResult
 }
 
 export function apply(ctx: HostContext, config: HostConfig = {}): void {
-  const registerRoute = ctx.webServer?.register;
-  if (typeof registerRoute !== 'function') {
+  const webServer = ctx.webServer;
+  if (webServer === undefined || typeof webServer.register !== 'function') {
     ctx.logger?.('dsh-geo-seo')?.warn?.('web server service is unavailable — the panel cannot reach the engine');
   } else {
+    // Keep the service object as the receiver: register() reads its own route
+    // tables through `this`, so a detached function reference throws.
+    const server = webServer as { register: (route: WebRouteRegistration) => () => void };
     const handler = async (req: HostRequest, res: HostResponse): Promise<void> => {
       const rawUrl = typeof req.url === 'string' ? req.url : '/';
       const queryStart = rawUrl.indexOf('?');
@@ -264,7 +319,7 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
       }
     };
     ctx.effect?.(() => {
-      const dispose = registerRoute({ kind: 'prefix', path: ROUTE_PREFIX, handler });
+      const dispose = server.register({ kind: 'prefix', path: ROUTE_PREFIX, handler });
       return () => {
         if (typeof dispose === 'function') dispose();
       };
@@ -272,18 +327,20 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
   }
 
   if (config.tools === false) return;
-  const registerTool = ctx.tools?.register;
-  if (typeof registerTool !== 'function') return;
 
-  const renderText = (text: string) => [{ type: 'text', text }];
-  const tools: unknown[] = [
+  const renderText = (text: string): Array<{ type: 'text'; text: string }> => [{ type: 'text', text }];
+  const tools: ToolDefinition[] = [
     {
       name: 'geo_seo_check',
       description:
         'Score a local project for GEO/SEO readiness (answer-level retrievability, not ranking). Returns the 100-point total, per-dimension scores, deductions located at file:line, and rationale for each weighted rule.',
       parameters: {
-        dir: { type: 'string', description: 'Absolute or cwd-relative project directory. Defaults to the last scanned directory.' },
-        format: { type: 'string', description: 'Output format: text (default), markdown, or json.' },
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          dir: { type: 'string', description: 'Absolute or cwd-relative project directory. Defaults to the last scanned directory.' },
+          format: { type: 'string', enum: ['text', 'markdown', 'json'], description: 'Output format: text (default), markdown, or json.' },
+        },
       },
       output: {
         schema: { type: 'string' },
@@ -302,11 +359,15 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
       description:
         'Render llms.txt, llms-full.txt, ai.txt and structured-data.jsonld from one parse of the repository. Refuses to overwrite existing files without force, and refuses to write JSON-LD whose claims cannot be found in visible copy.',
       parameters: {
-        dir: { type: 'string', description: 'Absolute or cwd-relative project directory.' },
-        outDir: { type: 'string', description: 'Output directory (defaults to a temp directory).' },
-        force: { type: 'boolean', description: 'Overwrite existing files whose content differs.' },
-        dryRun: { type: 'boolean', description: 'Report what would be written without touching disk.' },
-        maxEntries: { type: 'number', description: 'Maximum core pages listed (10-20 recommended).' },
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          dir: { type: 'string', description: 'Absolute or cwd-relative project directory.' },
+          outDir: { type: 'string', description: 'Output directory (defaults to a temp directory).' },
+          force: { type: 'boolean', description: 'Overwrite existing files whose content differs.' },
+          dryRun: { type: 'boolean', description: 'Report what would be written without touching disk.' },
+          maxEntries: { type: 'integer', description: 'Maximum core pages listed (10-20 recommended).' },
+        },
       },
       output: {
         schema: { type: 'string' },
@@ -324,7 +385,11 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
       description:
         'Check crawler reachability: robots.txt rules for AI crawlers, sitemap, meta robots, canonical, JS-gated content, and the domestic-engine configuration checks. Reachability is not a citation guarantee.',
       parameters: {
-        dir: { type: 'string', description: 'Absolute or cwd-relative project directory.' },
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          dir: { type: 'string', description: 'Absolute or cwd-relative project directory.' },
+        },
       },
       output: {
         schema: { type: 'string' },
@@ -342,9 +407,26 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
       description:
         'Record or summarise visibility monitoring samples: a fixed 20+ question library, whether the product is mentioned, whether the site is cited, and the trend with an explicit insufficient-sample warning.',
       parameters: {
-        dir: { type: 'string', description: 'Absolute or cwd-relative project directory.' },
-        platform: { type: 'string', description: 'Platform name for a new sample (e.g. chatgpt, perplexity). Omit to read history.' },
-        answers: { type: 'json', description: 'Array of { questionId, mentioned, cited, note? } for one sample.' },
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          dir: { type: 'string', description: 'Absolute or cwd-relative project directory.' },
+          platform: { type: 'string', description: 'Platform name for a new sample (e.g. chatgpt, perplexity). Omit to read history.' },
+          answers: {
+            type: 'array',
+            description: 'One sample: { questionId, mentioned, cited, note? } per answered question.',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                questionId: { type: 'string' },
+                mentioned: { type: 'boolean' },
+                cited: { type: 'boolean' },
+                note: { type: 'string' },
+              },
+            },
+          },
+        },
       },
       output: {
         schema: { type: 'string' },
@@ -374,7 +456,11 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
       name: 'geo_seo_questions',
       description: 'List the fixed monitoring question library used by geo_seo_monitor, with the {name} placeholder already filled in.',
       parameters: {
-        name: { type: 'string', description: 'Product name used to fill the question templates.' },
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          name: { type: 'string', description: 'Product name used to fill the question templates.' },
+        },
       },
       output: {
         schema: { type: 'string' },
@@ -388,18 +474,40 @@ export function apply(ctx: HostContext, config: HostConfig = {}): void {
     },
   ];
 
-  ctx.effect?.(() => {
+  // register() reaches its scope tables through `this`, so always call it on
+  // the service object rather than on a detached reference.
+  const registerTools = (registry: { register: ToolRegistrar }): (() => void) => {
     const disposers: Array<() => void> = [];
     for (const definition of tools) {
       try {
-        const dispose = registerTool(definition);
+        const dispose = registry.register(definition);
         if (typeof dispose === 'function') disposers.push(dispose);
       } catch (error) {
         ctx.logger?.('dsh-geo-seo')?.warn?.(`tool registration failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    ctx.logger?.('dsh-geo-seo')?.info?.(`registered ${disposers.length}/${tools.length} model tools`);
     return () => {
-      for (const dispose of disposers) dispose();
+      for (const dispose of disposers.reverse()) dispose();
     };
-  });
+  };
+
+  // The tool registry is provided by dsh-tools, which can come up after this
+  // plugin: ask cordis to call us when it exists instead of probing once now.
+  const injector = (ctx as {
+    inject?: (deps: string[], callback: (injected: any) => (() => void) | void) => (() => void) | void;
+  }).inject;
+  if (typeof injector === 'function') {
+    injector.call(ctx, ['tools'], (injected: any) => {
+      const registry = injected?.tools as { register?: ToolRegistrar } | undefined;
+      if (registry === undefined || typeof registry.register !== 'function') return;
+      return registerTools(registry as { register: ToolRegistrar });
+    });
+    return;
+  }
+
+  const toolRegistry = readOptionalService(ctx, 'tools') as { register?: ToolRegistrar } | undefined;
+  if (toolRegistry !== undefined && typeof toolRegistry.register === 'function') {
+    ctx.effect?.(() => registerTools(toolRegistry as { register: ToolRegistrar }));
+  }
 }

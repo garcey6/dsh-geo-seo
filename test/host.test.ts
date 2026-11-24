@@ -14,37 +14,79 @@ interface FakeResponse {
   end: (chunk?: string) => void;
 }
 
-function fakeContext(): { ctx: any; routes: FakeRoute[]; tools: string[]; runEffects: () => void; effects: number } {
+/**
+ * Both services keep their registrations on `this`, exactly like the host
+ * classes do. Calling a detached `register` therefore throws instead of
+ * silently succeeding — which is the bug this fake exists to catch.
+ */
+class FakeWebServer {
+  readonly routes: FakeRoute[] = [];
+  register(this: FakeWebServer, route: FakeRoute): () => void {
+    this.routes.push(route);
+    return () => {
+      const index = this.routes.indexOf(route);
+      if (index >= 0) this.routes.splice(index, 1);
+    };
+  }
+}
+
+class FakeToolRegistry {
+  readonly definitions: Array<{ name: string; parameters: any }> = [];
+  register(this: FakeToolRegistry, definition: { name: string; parameters: any }): () => void {
+    this.definitions.push(definition);
+    return () => {};
+  }
+}
+
+function fakeContext(): {
+  ctx: any;
+  routes: FakeRoute[];
+  tools: string[];
+  definitions: Array<{ name: string; parameters: any }>;
+  warnings: string[];
+  runEffects: () => void;
+  effects: number;
+} {
+  const webServer = new FakeWebServer();
+  const registry = new FakeToolRegistry();
   const state = {
-    routes: [] as FakeRoute[],
-    tools: [] as string[],
     effects: [] as (() => unknown)[],
+    warnings: [] as string[],
   };
   const ctx = {
-    webServer: {
-      register(route: FakeRoute) {
-        state.routes.push(route);
-        return () => {};
+    webServer,
+    // The registry is reachable only through reflect, like the real host: a
+    // plain `ctx.tools` read is what cordis rejects for undeclared services.
+    reflect: {
+      get(key: string) {
+        return key === 'tools' ? registry : undefined;
       },
     },
-    tools: {
-      register(definition: { name: string }) {
-        state.tools.push(definition.name);
-        return () => {};
-      },
+    // The host hands out late-provided services through ctx.inject.
+    inject(deps: string[], callback: (injected: any) => unknown) {
+      assert.deepEqual(deps, ['tools']);
+      return callback({ tools: registry });
     },
     effect(callback: () => unknown) {
       state.effects.push(callback);
     },
-    logger: () => ({ warn() {}, info() {}, debug() {} }),
+    logger: () => ({
+      warn(message: string) { state.warnings.push(message); },
+      info() {},
+      debug() {},
+    }),
   };
   const runEffects = (): void => {
     for (const effect of state.effects) effect();
   };
   return {
     ctx,
-    routes: state.routes,
-    tools: state.tools,
+    routes: webServer.routes,
+    definitions: registry.definitions,
+    get tools(): string[] {
+      return registry.definitions.map((definition) => definition.name);
+    },
+    warnings: state.warnings,
     runEffects,
     get effects() { return state.effects.length; },
   } as any;
@@ -85,13 +127,15 @@ async function call(route: FakeRoute, method: string, url: string, body?: unknow
   return { res, json };
 }
 
-function setup(): { route: FakeRoute; tools: string[] } {
+function setup(): { route: FakeRoute; tools: string[]; definitions: Array<{ name: string; parameters: any }> } {
   isolatedState();
   const fake = fakeContext();
   apply(fake.ctx, {});
   fake.runEffects();
+  // A service the plugin could not reach is a warning, not a silent no-op.
+  assert.deepEqual(fake.warnings, []);
   assert.equal(fake.routes.length, 1);
-  return { route: fake.routes[0]!, tools: fake.tools };
+  return { route: fake.routes[0]!, tools: fake.tools, definitions: fake.definitions };
 }
 
 test('apply registers one namespaced route and the documented tools', () => {
@@ -105,6 +149,22 @@ test('apply registers one namespaced route and the documented tools', () => {
     'geo_seo_monitor',
     'geo_seo_questions',
   ]);
+});
+
+test('every tool ships raw JSON Schema, as the host registry requires', () => {
+  const { definitions } = setup();
+  assert.equal(definitions.length, 5);
+  for (const definition of definitions) {
+    const schema = definition.parameters;
+    assert.equal(schema.type, 'object', definition.name);
+    assert.equal(typeof schema.properties, 'object', definition.name);
+    assert.ok(Object.keys(schema.properties).length > 0, definition.name);
+    // The host rejects shorthand definitions that skip the `properties` layer.
+    for (const [key, node] of Object.entries<any>(schema.properties)) {
+      assert.equal(typeof node.type, 'string', definition.name + '.' + key);
+      assert.ok(!('required' in (node as any)), definition.name + '.' + key);
+    }
+  }
 });
 
 test('the panel route serves a self-contained page', async () => {
