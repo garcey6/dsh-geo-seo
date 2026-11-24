@@ -6,6 +6,8 @@ rule change alters scores without altering behaviour.
 
 ## 0.1.1 - 2026-11-24
 
+Published to npm on 2026-11-24 as `latest`; `npm view dsh-geo-seo version` answers 0.1.1.
+
 Republished to the npm registry so `npm install dsh-geo-seo` resolves a package whose
 `engines.dsh` a DSH release actually satisfies (0.1.0 shipped `>=0.30.0` and is immutable).
 

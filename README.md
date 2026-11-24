@@ -9,7 +9,7 @@ shows every deduction with a file and line anchor, and states the evidence behin
 rule. **It does not promise rankings, traffic or citations, and it never estimates
 them.** A score is a description of your documentation, not a forecast.
 
-Current version 0.1.0 · requires Node 22.6+ and DSH 0.2.2-rc.5+ · MIT · Last updated: 2026-11-24 ·
+Current version 0.1.1 · requires Node 22.6+ and DSH 0.2.2-rc.5+ · MIT · Last updated: 2026-11-24 ·
 中文简介见 [docs/INTRO.md](docs/INTRO.md).
 
 ```
@@ -39,7 +39,7 @@ install it like any other bundle.
 1. Open **Plugins → Discover**, add this index URL once:
 
    ```text
-   https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@18f7422/market/index.json
+   https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@d050a1f/market/index.json
    ```
 
    The app rejects redirects, so the index URL must answer `200` directly. This jsDelivr
@@ -48,9 +48,9 @@ install it like any other bundle.
 
    | Host | URL | Good for |
    | --- | --- | --- |
-   | jsDelivr `fastly` (recommended) | `https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@18f7422/market/index.json` | any network |
-   | jsDelivr `gcore` | `https://gcore.jsdelivr.net/gh/garcey6/dsh-geo-seo@18f7422/market/index.json` | same file |
-   | jsDelivr `testingcf` | `https://testingcf.jsdelivr.net/gh/garcey6/dsh-geo-seo@18f7422/market/index.json` | same file |
+   | jsDelivr `fastly` (recommended) | `https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@d050a1f/market/index.json` | any network |
+   | jsDelivr `gcore` | `https://gcore.jsdelivr.net/gh/garcey6/dsh-geo-seo@d050a1f/market/index.json` | same file |
+   | jsDelivr `testingcf` | `https://testingcf.jsdelivr.net/gh/garcey6/dsh-geo-seo@d050a1f/market/index.json` | same file |
    | GitHub Pages | `https://garcey6.github.io/dsh-geo-seo/market/index.json` | only after Pages is enabled |
    | GitHub `main` | `https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json` | plain TLS to GitHub |
 
@@ -59,8 +59,9 @@ install it like any other bundle.
    - `https://cdn.jsdelivr.net/...`, the default jsDelivr host, is reset on some networks
      (`ECONNRESET`); the `fastly`, `gcore` and `testingcf` aliases serve the same file.
    - `https://unpkg.com/dsh-geo-seo/market/index.json` answers `302`, which Discover reports
-     as "unexpected redirect". The pinned form `https://unpkg.com/dsh-geo-seo@0.1.0/market/index.json`
-     answers `200` but is frozen inside the 0.1.0 tarball, whose index predates this fix.
+     as "unexpected redirect". The version-pinned form answers `200`, but it serves the
+     `market/index.json` that was inside that published tarball, so it lags the repository.
+     Pin jsDelivr to a commit when you need the exact bytes.
    - `https://raw.githubusercontent.com/...` fails with `unable to verify the first
      certificate` wherever a TLS proxy re-signs GitHub traffic: the app fetches with Node's
      bundled CAs, not the operating system's store.
@@ -68,16 +69,17 @@ install it like any other bundle.
      Pages is enabled in **Settings → Pages → Source: GitHub Actions**; the deploy workflow
      cannot create the site itself, because `GITHUB_TOKEN` has no admin rights.
 
-2. The index installs **from git at a pinned commit, not from npm**. `dsh-geo-seo@0.1.0`
-   on npm declares `engines.dsh` as `>=0.30.0`, which no DSH release satisfies, and a
-   published version cannot be replaced; the git source installs this repository, whose
-   manifest and committed `dist/` are correct.
+2. The index installs **from git at a pinned commit**. A git source resolves to exactly
+   this tree — manifest, committed `dist/` and client entry all as reviewed — and never
+   depends on registry metadata or CDN caching. The npm package is correct too:
+   `dsh-geo-seo@0.1.1` declares `engines.dsh: ">=0.2.2-rc.5"`, so a registry install
+   (`npm install` / `pnpm add`) works as well.
 
 3. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
    `geo_seo_questions` — and serves its panel from the same local web server as the app
    (`/geo-seo/api/*`). Nothing is uploaded anywhere.
-3. Open the right sidebar; the **GEO / SEO** tab appears in the guide and in the tab menu.
+4. Open the right sidebar; the **GEO / SEO** tab appears in the guide and in the tab menu.
 
 ### From a git URL
 
@@ -116,7 +118,7 @@ same local web server as the app (`/geo-seo/api/*`). Nothing is uploaded anywher
 ### As a CLI
 
 ```bash
-npm install -g dsh-geo-seo   # or: pnpm add -g dsh-geo-seo
+npm install -g dsh-geo-seo   # 0.1.1 or newer; or: pnpm add -g dsh-geo-seo
 geo-seo check --dir ./my-plugin
 ```
 
@@ -211,7 +213,7 @@ For this repository that block looks like:
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "dsh-geo-seo",
-  "softwareVersion": "0.1.0",
+  "softwareVersion": "0.1.1",
   "applicationCategory": "DeveloperApplication",
   "license": "MIT",
   "author": { "@type": "Person", "name": "garcey" },
@@ -262,7 +264,7 @@ evidence level; adding a rule means adding one entry plus a fixture in `test/`.
 
 ## Changelog
 
-Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0.1.0
+Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0.1.1
 (2026-11-24).
 
 ## Links
@@ -270,7 +272,7 @@ Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0
 - Repository: <https://github.com/garcey6/dsh-geo-seo>
 - Issues: <https://github.com/garcey6/dsh-geo-seo/issues>
 - npm: <https://www.npmjs.com/package/dsh-geo-seo>
-- Plugin market index: <https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@18f7422/market/index.json> (source: [market/index.json](market/index.json))
+- Plugin market index: <https://fastly.jsdelivr.net/gh/garcey6/dsh-geo-seo@d050a1f/market/index.json> (source: [market/index.json](market/index.json))
 - Design notes: [docs/DETAIL.md](docs/DETAIL.md) · [中文](docs/DETAIL.zh.md)
 - Short descriptions for listings: [docs/INTRO.md](docs/INTRO.md)
 
