@@ -21,6 +21,14 @@ rule change alters scores without altering behaviour.
   the declaration never collapses. Registration now runs inside
   `ctx.inject(['sidebarRightTabs', 'slots'], …)`, the guide row carries the shape the registry
   validates (`order` plus thunk title/description), and the body seat is keyed to the type id.
+- The host entry no longer detaches `register` from its service. `webServer.register` reads
+  `this.prefixes` and `tools.register` reads `this.layers`, so calling either through a bare
+  function reference threw `Cannot read properties of undefined (reading 'prefixes')` and aborted
+  `apply()` — no route, no tools, no panel. Both now call through the service object.
+- Tool definitions ship raw JSON Schema instead of the `defineTool` shorthand: the registry
+  validates `{ type: 'object', properties: … }`, so the shorthand map was rejected. Tools also
+  register inside `ctx.inject(['tools'], …)` so a registry provided after activation is picked up,
+  and the host test fakes are class-based so a detached `register()` fails the suite.
 - `dist/` is committed and the `prepare` script is gone. A git install needs no build step,
   which is the only way it works under pnpm, whose `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`
   blocks an un-allowlisted `prepare` script for a git dependency.

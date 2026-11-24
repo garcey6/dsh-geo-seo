@@ -70,11 +70,11 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishTimestamp": 1795530646,
+          "publishTimestamp": 1795531970,
           "source": {
             "type": "git",
             "url": "https://github.com/garcey6/dsh-geo-seo.git",
-            "commit": "bd98adc78ef7a2dccc713e4824087318292d2083"
+            "commit": "8e2494dfb5914cc3e1e81282f22859c2a002c2fb"
           },
           "engines": {
             "dsh": ">=0.2.2-rc.5"
