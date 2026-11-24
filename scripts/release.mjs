@@ -76,6 +76,7 @@ run('git', ['commit', '-m', 'chore(market): index ' + pkg.name + '@' + pkg.versi
 run('git', ['push', 'origin', 'HEAD']);
 
 const indexUrl = 'https://raw.githubusercontent.com/garcey6/dsh-geo-seo/main/market/index.json';
+// Pinned version: the versionless form answers 302 and the app rejects redirects.
 const unpkgUrl = 'https://unpkg.com/' + pkg.name + '@' + pkg.version + '/market/index.json';
 console.log('\ndone.');
 console.log('  npm:    https://www.npmjs.com/package/' + pkg.name);

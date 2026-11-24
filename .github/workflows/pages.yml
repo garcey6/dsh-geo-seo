@@ -1,8 +1,9 @@
 name: pages
 
 on:
-  push:
-    branches: [main]
+  # Manual only: creating the Pages site needs repo-admin rights, which GITHUB_TOKEN
+  # does not have. Enable Pages once in Settings -> Pages (Source: GitHub Actions),
+  # then run this workflow to publish market/ at the versionless URL.
   workflow_dispatch:
 
 permissions:
