@@ -1,3 +1,4 @@
+import { PROMPTS } from './prompts.js';
 import { anchors, findSuperlatives, findUncitedNumbers, firstParagraph, fullText, hasFeatureList, hasInstallCommand, hasUsageSection, headingJumps, relativePosition, topTerm, wordCountOf, } from './rules-helpers.js';
 import { bodyText, leadText } from './markdown.js';
 import { AI_CRAWLERS, blockedAgents } from './site.js';
@@ -25,7 +26,8 @@ export const DIMENSIONS = [
 const MIN_WORDS = 600;
 const STALE_DAYS = 365;
 const DRIFT_DAYS = 90;
-export const RULES = [
+/** Rule data before the panel copy is attached; see RULES below. */
+const BASE_RULES = [
     // ---------------------------------------------------------------- relevance
     {
         id: 'REL-001',
@@ -437,6 +439,7 @@ export const RULES = [
                     suggestion: 'Add a configuration table with columns name, type, default and description.',
                     deduction: 4,
                     anchors: source ? [{ file: source.file }] : [],
+                    missing: missing.slice(0, 6),
                 }];
         },
     },
@@ -948,7 +951,8 @@ export const RULES = [
         },
     },
 ];
-export const ADVISORY_RULES = [
+/** Advisory data before the panel copy is attached; see ADVISORY_RULES below. */
+const ADVISORY_BASE = [
     {
         id: 'TYP-001',
         severity: 'info',
@@ -1023,5 +1027,23 @@ export const ADVISORY_RULES = [
         },
     },
 ];
+/** Looks up the panel copy a rule must ship; a missing entry is a bug, not a gap. */
+function promptFor(ruleId) {
+    const copy = PROMPTS[ruleId];
+    if (copy === undefined) {
+        throw new Error('rule ' + ruleId + ' has no entry in prompts.ts (priority, impact and prompt are required)');
+    }
+    return copy;
+}
+/**
+ * The published pack: rule data plus the panel half of each rule (urgency, the
+ * cost to the reader, and a copy-ready repair prompt).
+ */
+export const RULES = BASE_RULES.map((rule) => ({ ...rule, ...promptFor(rule.id) }));
+/** Advisories carry the same panel copy, but never score. */
+export const ADVISORY_RULES = ADVISORY_BASE.map((rule) => ({
+    ...rule,
+    ...promptFor(rule.id),
+}));
 export { MIN_WORDS, STALE_DAYS, DRIFT_DAYS };
 export { bodyText };

@@ -1,6 +1,6 @@
 {
   "name": "dsh-geo-seo",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "GEO/SEO health check for DSH plugin repositories: score docs against a versioned rule pack, then generate llms.txt, ai.txt and JSON-LD from the same verified facts.",
   "type": "module",
   "license": "MIT",

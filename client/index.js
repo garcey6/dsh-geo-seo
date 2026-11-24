@@ -38,12 +38,90 @@ window.__ModuleLoader__.load({
       colorScheme: 'normal',
     };
 
+    /** The plugin context, published by apply() so the frame can read host services. */
+    let hostContext = null;
+
+    /** Base URL of the plugin's HTTP surface (everything before "/panel"). */
+    function apiBase() {
+      const url = panelUrl();
+      const cut = url.lastIndexOf('/panel');
+      return cut === -1 ? url : url.slice(0, cut);
+    }
+
+    async function postJson(endpoint, body) {
+      const response = await fetch(apiBase() + endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body || {}),
+      });
+      const payload = await response.json().catch(function () {
+        return { ok: false, error: 'unreadable response' };
+      });
+      if (!payload || payload.ok !== true) {
+        throw new Error(payload && payload.error ? payload.error : 'request failed');
+      }
+      return payload.value;
+    }
+
+    /**
+     * Root of the session's workspace, read from the host service. The panel is
+     * an iframe, so it cannot reach this itself: everything here travels on
+     * window.__GEO_HOST__, injected into the frame on load.
+     */
+    function workspaceRoot() {
+      try {
+        const service =
+          hostContext && typeof hostContext.get === 'function' ? hostContext.get('workspaces') : undefined;
+        const snapshot =
+          service && service.list && typeof service.list.getSnapshot === 'function'
+            ? service.list.getSnapshot()
+            : undefined;
+        const items = snapshot && Array.isArray(snapshot.items) ? snapshot.items : [];
+        for (const item of items) {
+          if (item && typeof item.path === 'string' && item.path !== '') return item.path;
+        }
+      } catch (error) {
+        /* a missing workspace service is a normal headless case */
+      }
+      return null;
+    }
+
+    function buildHostApi() {
+      return {
+        version: '1',
+        getWorkspaceRoot: function () {
+          return workspaceRoot();
+        },
+        pickDirectory: async function () {
+          const value = await postJson('/pick-dir', {});
+          return value && typeof value.path === 'string' ? value.path : null;
+        },
+        openFile: async function (filePath, line) {
+          const value = await postJson('/open-file', { path: filePath, line: line });
+          return value && value.opened === true;
+        },
+      };
+    }
+
+    /** Publish the bridge as early as the frame allows; the panel also polls for it. */
+    function onFrameLoad(event) {
+      const frame = event && event.target;
+      const win = frame && frame.contentWindow;
+      if (!win) return;
+      try {
+        win.__GEO_HOST__ = buildHostApi();
+      } catch (error) {
+        console.warn('[dsh-geo-seo] could not expose the host bridge to the panel', error);
+      }
+    }
+
     function PanelFrame() {
       return React.createElement('iframe', {
         src: panelUrl(),
         title: TAB_TITLE,
         style: frameStyle,
         allow: 'clipboard-write',
+        onLoad: onFrameLoad,
       });
     }
 
@@ -108,6 +186,7 @@ window.__ModuleLoader__.load({
 
     function apply(ctx) {
       if (!ctx || typeof ctx.inject !== 'function') return;
+      hostContext = ctx;
       // Wait for the tab-type REGISTRY (a service), not for the slot
       // declaration: the native seat declares 'sidebar.right.pane.tab' BEFORE
       // it provides `sidebarRightTabs`, so a registration driven by the

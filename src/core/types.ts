@@ -14,6 +14,13 @@ export const REPORT_SCHEMA_VERSION = 1;
 export type Severity = 'error' | 'warning' | 'info';
 
 /**
+ * Panel-facing urgency, independent of severity: a compliance gate and a
+ * missing install command both stop a reader, while a trailing space does not.
+ * The panel sorts by this first, so it must be authored, never inferred.
+ */
+export type Priority = 'high' | 'medium' | 'low';
+
+/**
  * How strong the published evidence behind a rule is. This is deliberately
  * coarse: the report must never present a heuristic as settled science.
  */
@@ -209,7 +216,8 @@ export interface FactGraph {
   errors: ParseError[];
 }
 
-export interface RuleDefinition {
+/** The rule contract without its user-facing prompt copy. */
+export interface RuleDefinitionBase {
   id: string;
   dimension: DimensionId;
   severity: Severity;
@@ -228,6 +236,24 @@ export interface RuleDefinition {
   check: RuleCheck;
 }
 
+/**
+ * The panel copy every rule must ship: urgency, the cost to the reader, and a
+ * prompt the user can paste straight into a coding agent. Templates use the
+ * placeholders documented in prompt.ts.
+ */
+export interface RulePromptFields {
+  priority: Priority;
+  /** What the deduction costs the reader, one sentence (English). */
+  impact: string;
+  impactZh: string;
+  /** Copy-ready repair prompt (Chinese). */
+  promptTemplate: string;
+  /** Copy-ready repair prompt (English). */
+  promptTemplateEn: string;
+}
+
+export interface RuleDefinition extends RuleDefinitionBase, RulePromptFields {}
+
 export interface RuleContext {
   graph: FactGraph;
   /** Primary document (README.md) when present, else the first Markdown doc. */
@@ -238,7 +264,9 @@ export interface RuleContext {
 }
 
 /** Returns findings for one rule; anchors must point at real lines. */
-export type RuleCheck = (ctx: RuleContext) => Omit<Finding, 'ruleId' | 'dimension' | 'severity' | 'evidence' | 'rationale'>[];
+export type RuleCheck = (
+  ctx: RuleContext,
+) => Omit<Finding, 'ruleId' | 'dimension' | 'severity' | 'evidence' | 'rationale' | 'priority' | 'impact' | 'impactZh' | 'prompt' | 'promptZh'>[];
 
 export interface Finding {
   ruleId: string;
@@ -252,6 +280,15 @@ export interface Finding {
   evidence: EvidenceLevel;
   rationale: string;
   gate?: boolean;
+  priority: Priority;
+  impact: string;
+  impactZh: string;
+  /** English repair prompt, rendered from the rule template. */
+  prompt: string;
+  /** Chinese repair prompt, rendered from the rule template. */
+  promptZh: string;
+  /** Concrete items the rule looked for and did not find, e.g. config keys. */
+  missing?: string[];
 }
 
 export interface DimensionScore {
@@ -273,6 +310,11 @@ export interface Advisory {
   suggestion: string;
   anchors: Anchor[];
   evidence: EvidenceLevel;
+  priority: Priority;
+  impact: string;
+  impactZh: string;
+  prompt: string;
+  promptZh: string;
 }
 
 export interface ScoreResult {
@@ -294,10 +336,27 @@ export interface AuditFinding {
   suggestion: string;
   anchors: Anchor[];
   evidence: EvidenceLevel;
+  priority: Priority;
+  impact: string;
+  impactZh: string;
+  prompt: string;
+  promptZh: string;
+}
+
+/** One entry of the fixed 13-check crawlability list, reported pass or fail. */
+export interface AuditCheck {
+  id: string;
+  scope: 'international' | 'domestic';
+  title: string;
+  titleZh: string;
+  /** True when no finding for this check was produced. */
+  ok: boolean;
 }
 
 export interface AuditResult {
   findings: AuditFinding[];
+  /** The full 13-item checklist, in display order, with pass/fail per item. */
+  checks: AuditCheck[];
   /** Statements the audit must always show, e.g. robots != citable. */
   notes: string[];
 }

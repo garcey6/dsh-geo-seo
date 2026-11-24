@@ -5,7 +5,7 @@
  * version so a report can always say which rules produced it. Deductions are
  * capped per dimension by the scorer, not here.
  */
-import type { DimensionId, RuleContext, RuleDefinition } from './types.js';
+import type { DimensionId, RuleContext, RuleDefinition, RulePromptFields } from './types.js';
 import { bodyText } from './markdown.js';
 export declare const RULE_PACK_VERSION = "2026.02.1";
 export declare const RULE_PACK_RELEASED = "2026-02-18";
@@ -26,7 +26,6 @@ export declare const DIMENSIONS: {
 declare const MIN_WORDS = 600;
 declare const STALE_DAYS = 365;
 declare const DRIFT_DAYS = 90;
-export declare const RULES: RuleDefinition[];
 /** Rules that never score: typography is reported for the reader only. */
 export interface AdvisoryRule {
     id: string;
@@ -41,6 +40,12 @@ export interface AdvisoryRule {
         }[];
     }[];
 }
-export declare const ADVISORY_RULES: AdvisoryRule[];
+/**
+ * The published pack: rule data plus the panel half of each rule (urgency, the
+ * cost to the reader, and a copy-ready repair prompt).
+ */
+export declare const RULES: RuleDefinition[];
+/** Advisories carry the same panel copy, but never score. */
+export declare const ADVISORY_RULES: (AdvisoryRule & RulePromptFields)[];
 export { MIN_WORDS, STALE_DAYS, DRIFT_DAYS };
 export { bodyText };

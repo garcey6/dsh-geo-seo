@@ -156,14 +156,21 @@ YisouSpider）、无中文页面、中文页面过短、缺 viewport、屏蔽 Ba
 ## 10. 宿主集成
 
 `src/index.ts` 导出 `apply(ctx, config)`、`inject = ['webServer']` 与 `Config` 类型，
-注册五个工具和一条前缀路由 `/geo-seo/api`：GET `state` / `panel` / `questions` /
-`monitor`，POST `check` / `generate` / `audit` / `monitor`。所有注册都包在 `ctx.effect` 里，
-热重载时释放旧路由而不是泄漏。未知路径返回 404，方法不匹配返回 405，目标非法返回 400 并带消息。
+注册五个工具和一条前缀路由 `/geo-seo/api`：GET `state` / `assets` / `preview` /
+`questions` / `monitor`，POST `check` / `generate` / `audit` / `monitor` /
+`monitor/import` / `pick-dir` / `open-file`。所有注册都包在 `ctx.effect` 里，热重载时释放
+旧路由而不是泄漏。未知路径返回 404，方法不匹配返回 405；目标非法返回 400，消息只写目录名，
+绝对路径放在单独的 `detail` 字段里，由面板收进「查看详情」。
 
 面板是 `assets/panel.html`，由宿主路由提供，在侧栏标签页的 iframe 里渲染
 （`client/index.js`）。它是一份普通文档：不需要打包器、不依赖 Harness 客户端包、无外部资源。
-打开时读取 `/geo-seo/api/state`，调用与 CLI 相同的端点。语言优先跟随应用 locale，其次浏览器
-语言，可在面板内切换，选择记在 localStorage。
+单页纵向六区：项目选择、评分 Hero、问题卡片，然后是资产 / 可抓取性 / 可见性监测三个折叠区。
+每张问题卡片给出优先级、影响、建议，以及由规则的 `promptTemplate` / `promptTemplateEn` 渲染的
+提示词；面板复制当前语言的提示词，`--format json` 里也是同一个字符串。
+面板的 `POST /generate` 直接写进项目目录（工具侧仍默认写临时目录），因此资产表能把磁盘字节与
+生成结果对照。`POST /pick-dir` 在宿主暴露 Electron 时打开原生目录对话框，否则返回
+`{ path: null }`，面板于是回退到「高级」里的文本框。语言跟随浏览器，可在面板内切换，
+选择记在 localStorage。
 
 ## 11. 扩展点
 

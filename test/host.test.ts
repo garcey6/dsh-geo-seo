@@ -210,3 +210,85 @@ test('a bad target is a 400 with a readable message, and unknown routes are 404'
   const notFound = await call(route, 'GET', '/geo-seo/api/nope');
   assert.equal(notFound.res.statusCode, 404);
 });
+test('the assets route reports what exists next to the project', async () => {
+  const { route } = setup();
+  const dir = makeWorkspace({ 'README.md': healthyReadme() });
+  const { res, json } = await call(route, 'GET', '/geo-seo/api/assets?dir=' + encodeURIComponent(dir));
+  assert.equal(res.statusCode, 200);
+  assert.equal(json.ok, true);
+  assert.deepEqual(
+    json.value.files.map((file: { name: string }) => file.name),
+    ['llms.txt', 'llms-full.txt', 'ai.txt', 'structured-data.jsonld'],
+  );
+  // Nothing was generated yet, so every row is missing rather than current.
+  assert.ok(json.value.files.every((file: { status: string }) => file.status === 'missing'));
+  assert.equal(typeof json.value.verification.ok, 'boolean');
+});
+
+test('preview refuses an unknown asset and serves a generated one', async () => {
+  const { route } = setup();
+  const dir = makeWorkspace({ 'README.md': healthyReadme() });
+  const before = await call(route, 'GET', '/geo-seo/api/preview?dir=' + encodeURIComponent(dir) + '&name=llms.txt');
+  assert.equal(before.res.statusCode, 400);
+  assert.match(before.json.error, /not generated yet/i);
+
+  const traversal = await call(route, 'GET', '/geo-seo/api/preview?dir=' + encodeURIComponent(dir) + '&name=../README.md');
+  assert.equal(traversal.res.statusCode, 400);
+  assert.match(traversal.json.error, /unknown asset/i);
+
+  const generated = await call(route, 'POST', '/geo-seo/api/generate', { dir, force: true });
+  assert.equal(generated.res.statusCode, 200);
+
+  const after = await call(route, 'GET', '/geo-seo/api/preview?dir=' + encodeURIComponent(dir) + '&name=llms.txt');
+  assert.equal(after.res.statusCode, 200);
+  assert.equal(after.json.value.name, 'llms.txt');
+  assert.ok(after.json.value.content.length > 0);
+  assert.equal(after.json.value.truncated, false);
+});
+
+test('directory picking and file opening degrade to null/false without electron', async () => {
+  const { route } = setup();
+  const picked = await call(route, 'POST', '/geo-seo/api/pick-dir', {});
+  assert.equal(picked.res.statusCode, 200);
+  // A headless host has no dialog; the panel falls back to the text field.
+  assert.equal(picked.json.value.path, null);
+
+  const dir = makeWorkspace({ 'README.md': healthyReadme() });
+  const opened = await call(route, 'POST', '/geo-seo/api/open-file', { dir, path: 'README.md', line: 3 });
+  assert.equal(opened.res.statusCode, 200);
+  assert.equal(opened.json.value.opened, false);
+  assert.equal(opened.json.value.line, 3);
+
+  const missing = await call(route, 'POST', '/geo-seo/api/open-file', { dir });
+  assert.equal(missing.res.statusCode, 400);
+  assert.match(missing.json.error, /path is required/i);
+});
+
+test('monitor samples can be imported and are then summarised', async () => {
+  const { route } = setup();
+  const dir = makeWorkspace({ 'README.md': healthyReadme() });
+  const imported = await call(route, 'POST', '/geo-seo/api/monitor/import', {
+    dir,
+    runs: [
+      {
+        at: '2026-01-02T03:04:05.000Z',
+        platform: 'chatgpt',
+        answers: [
+          { questionId: 'q01', mentioned: true, cited: false },
+          { questionId: 'q02', mentioned: true, cited: true },
+        ],
+      },
+    ],
+  });
+  assert.equal(imported.res.statusCode, 200);
+  assert.equal(imported.json.value.imported, 1);
+
+  const monitor = await call(route, 'GET', '/geo-seo/api/monitor?dir=' + encodeURIComponent(dir));
+  assert.equal(monitor.res.statusCode, 200);
+  assert.equal(monitor.json.value.runs.length, 1);
+  assert.equal(monitor.json.value.runs[0].at, '2026-01-02T03:04:05.000Z');
+
+  const empty = await call(route, 'POST', '/geo-seo/api/monitor/import', { dir, runs: [] });
+  assert.equal(empty.res.statusCode, 400);
+  assert.match(empty.json.error, /runs must be a non-empty array/i);
+});

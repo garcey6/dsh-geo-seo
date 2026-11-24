@@ -8,6 +8,8 @@ export interface GenerateOptions {
     dryRun?: boolean;
     /** Maximum number of pages listed in llms.txt. */
     maxEntries?: number;
+    /** Write only these asset file names; omitted or empty means all four. */
+    names?: string[];
     now?: Date;
 }
 interface PageEntry {

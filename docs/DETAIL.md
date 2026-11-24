@@ -183,16 +183,26 @@ truncated line is skipped rather than breaking the history.
 
 `src/index.ts` exports `apply(ctx, config)`, `inject = ['webServer']` and a `Config`
 type. It registers five tools and one prefixed route (`/geo-seo/api`) with endpoints
-`state`, `panel`, `questions`, `monitor` (GET) and `check`, `generate`, `audit`,
-`monitor` (POST). Every registration goes through `ctx.effect` so a hot reload disposes
-the old route instead of leaking it. Unknown paths answer 404, wrong methods 405, and a
-bad target a 400 with the message.
+`state`, `assets`, `preview`, `questions`, `monitor` (GET) and `check`, `generate`,
+`audit`, `monitor`, `monitor/import`, `pick-dir`, `open-file` (POST). Every registration
+goes through `ctx.effect` so a hot reload disposes the old route instead of leaking it.
+Unknown paths answer 404, wrong methods 405. A bad target answers 400 with a message that
+names the folder only; the absolute path travels in the separate `detail` field so the
+panel can hide it behind *View details*.
 
 The panel is `assets/panel.html`, served by the host and rendered in an iframe inside the
 sidebar tab (`client/index.js`). It is a plain document: no bundler, no Harness client
-packages, no external assets. It reads `/geo-seo/api/state` on open and calls the same
-endpoints the CLI uses. Language follows the app locale when available, then the browser
-language, and can be switched in the panel; the choice is remembered in localStorage.
+packages, no external assets. One vertical page, six zones: project picker, score hero,
+issue cards, then assets, crawlability and monitoring as collapsed sections. Every issue
+card prints the priority, the impact, the suggestion and a prompt rendered from the rule's
+`promptTemplate`/`promptTemplateEn`; the panel copies the prompt in the current language,
+and `--format json` carries the same string. `POST /generate` from the panel writes into
+the project directory (the agent tool keeps the temp default), so the asset table can
+compare the bytes on disk with the bytes the generator would produce.
+`POST /pick-dir` opens the native folder dialog through Electron when the host exposes it
+and answers `{ path: null }` otherwise, which sends the panel back to the text field under
+*Advanced*. Language follows the browser, can be switched in the panel, and is remembered
+in localStorage.
 
 ## 11. Extending
 

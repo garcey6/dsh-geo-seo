@@ -25,6 +25,8 @@ export interface GenerateOptions {
   dryRun?: boolean;
   /** Maximum number of pages listed in llms.txt. */
   maxEntries?: number;
+  /** Write only these asset file names; omitted or empty means all four. */
+  names?: string[];
   now?: Date;
 }
 
@@ -347,7 +349,11 @@ export function generateAssets(graph: FactGraph, options: GenerateOptions = {}):
 
   const files: GenerateFileResult[] = [];
 
+  const only = options.names !== undefined && options.names.length > 0 ? new Set(options.names) : undefined;
+  const wanted = (name: string): boolean => only === undefined || only.has(name);
+
   const writeFile = (name: string, content: string, extraWarnings: string[] = []): void => {
+    if (!wanted(name)) return;
     const target = path.join(outDir, name);
     const result: GenerateFileResult = { path: target, bytes: Buffer.byteLength(content, 'utf8'), written: false, warnings: extraWarnings };
     if (dryRun) {
@@ -383,7 +389,7 @@ export function generateAssets(graph: FactGraph, options: GenerateOptions = {}):
   writeFile('ai.txt', llms.content, ['mirror of llms.txt (alternate filename convention)']);
 
   if (!verification.ok && jsonLd.blocking.length > 0) {
-    files.push({
+    if (wanted('structured-data.jsonld')) files.push({
       path: path.join(outDir, 'structured-data.jsonld'),
       bytes: 0,
       written: false,

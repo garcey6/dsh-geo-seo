@@ -1,5 +1,6 @@
 import { ADVISORY_RULES, DIMENSIONS, RULES } from './rules.js';
 import { primaryDocument, combinedText } from './scan.js';
+import { renderPrompt } from './prompt.js';
 import { normalizeWhitespace, round } from './util.js';
 export const CAP_ON_GATE = 60;
 export function buildRuleContext(graph, now = new Date()) {
@@ -12,6 +13,20 @@ export function buildRuleContext(graph, now = new Date()) {
     if (primary)
         context.primary = primary;
     return context;
+}
+/** Collects what a repair prompt may name, leaving the rest to the renderer's fallback. */
+function promptValues(graph, anchor, title, suggestion, missing) {
+    const values = { title, suggestion };
+    const plugin = graph.packageJson?.name;
+    if (plugin !== undefined)
+        values.plugin = plugin;
+    if (anchor?.file !== undefined)
+        values.file = anchor.file;
+    if (anchor?.line !== undefined)
+        values.line = anchor.line;
+    if (missing !== undefined && missing.length > 0)
+        values.missing = missing;
+    return values;
 }
 /** Runs every rule. A crashing rule is reported, never fatal. */
 export function evaluateRules(graph, now = new Date()) {
@@ -28,20 +43,31 @@ export function evaluateRules(graph, now = new Date()) {
             continue;
         }
         for (const item of produced) {
+            const title = item.title || rule.title;
+            const suggestion = item.suggestion || rule.suggestion;
+            const anchors = dedupeAnchors(item.anchors);
+            const values = promptValues(graph, anchors[0], title, suggestion, item.missing);
             const finding = {
                 ruleId: rule.id,
                 dimension: rule.dimension,
                 severity: rule.severity,
                 deduction: item.deduction ?? rule.deduction,
-                title: item.title || rule.title,
+                title,
                 detail: item.detail || rule.detail,
-                suggestion: item.suggestion || rule.suggestion,
-                anchors: dedupeAnchors(item.anchors),
+                suggestion,
+                anchors,
                 evidence: rule.evidence,
                 rationale: rule.rationale,
+                priority: rule.priority,
+                impact: rule.impact,
+                impactZh: rule.impactZh,
+                prompt: renderPrompt(rule.promptTemplateEn, values),
+                promptZh: renderPrompt(rule.promptTemplate, values),
             };
             if (rule.gate)
                 finding.gate = true;
+            if (item.missing !== undefined)
+                finding.missing = item.missing;
             findings.push(finding);
         }
     }
@@ -56,14 +82,21 @@ export function evaluateRules(graph, now = new Date()) {
             continue;
         }
         for (const item of produced) {
+            const anchors = dedupeAnchors(item.anchors);
+            const values = promptValues(graph, anchors[0], rule.title, item.suggestion);
             advisories.push({
                 ruleId: rule.id,
                 severity: rule.severity,
                 title: rule.title,
                 detail: item.detail,
                 suggestion: item.suggestion,
-                anchors: dedupeAnchors(item.anchors),
+                anchors,
                 evidence: 'heuristic',
+                priority: rule.priority,
+                impact: rule.impact,
+                impactZh: rule.impactZh,
+                prompt: renderPrompt(rule.promptTemplateEn, values),
+                promptZh: renderPrompt(rule.promptTemplate, values),
             });
         }
     }

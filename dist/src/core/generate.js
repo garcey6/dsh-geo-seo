@@ -315,7 +315,11 @@ export function generateAssets(graph, options = {}) {
         warnings.push('Only ' + llms.entries.length + ' core pages; the PRD asks for 10-20.');
     }
     const files = [];
+    const only = options.names !== undefined && options.names.length > 0 ? new Set(options.names) : undefined;
+    const wanted = (name) => only === undefined || only.has(name);
     const writeFile = (name, content, extraWarnings = []) => {
+        if (!wanted(name))
+            return;
         const target = path.join(outDir, name);
         const result = { path: target, bytes: Buffer.byteLength(content, 'utf8'), written: false, warnings: extraWarnings };
         if (dryRun) {
@@ -350,13 +354,14 @@ export function generateAssets(graph, options = {}) {
     writeFile('llms-full.txt', full.content);
     writeFile('ai.txt', llms.content, ['mirror of llms.txt (alternate filename convention)']);
     if (!verification.ok && jsonLd.blocking.length > 0) {
-        files.push({
-            path: path.join(outDir, 'structured-data.jsonld'),
-            bytes: 0,
-            written: false,
-            reason: 'refused: ' + jsonLd.blocking.map((item) => item.field).join(', ') + ' cannot be verified against the visible text',
-            warnings: [],
-        });
+        if (wanted('structured-data.jsonld'))
+            files.push({
+                path: path.join(outDir, 'structured-data.jsonld'),
+                bytes: 0,
+                written: false,
+                reason: 'refused: ' + jsonLd.blocking.map((item) => item.field).join(', ') + ' cannot be verified against the visible text',
+                warnings: [],
+            });
     }
     else {
         const jsonWarnings = jsonLd.dropped.map((item) => item.field + ' dropped: ' + item.reason);

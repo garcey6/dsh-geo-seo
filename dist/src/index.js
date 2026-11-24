@@ -45,7 +45,22 @@ function readOptionalService(ctx, name) {
 /** Route prefix the sidebar panel talks to. */
 const ROUTE_PREFIX = '/geo-seo/api';
 /** Every endpoint the router answers; anything else is a 404, not a 405. */
-const KNOWN_ENDPOINTS = new Set(['/state', '/panel', '/monitor', '/questions', '/check', '/generate', '/audit']);
+const KNOWN_ENDPOINTS = new Set([
+    '/state',
+    '/panel',
+    '/monitor',
+    '/questions',
+    '/check',
+    '/generate',
+    '/audit',
+    '/assets',
+    '/preview',
+    '/pick-dir',
+    '/open-file',
+    '/monitor/import',
+]);
+/** The four generated assets, in the order the panel lists them. */
+const ASSET_NAMES = ['llms.txt', 'llms-full.txt', 'ai.txt', 'structured-data.jsonld'];
 /** Absolute paths the panel may scan, one per process (path-escape guard). */
 const MAX_BODY_BYTES = 64 * 1024;
 function sendJson(res, status, body) {
@@ -85,18 +100,30 @@ function stringField(source, key) {
     return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 }
 /**
+ * A scan target that cannot be used. The message names only the last path
+ * segment so an error banner never leaks the host's absolute layout; the full
+ * path travels in `target` for the collapsed "details" disclosure.
+ */
+class TargetError extends Error {
+    code;
+    target;
+    constructor(code, target) {
+        super((code === 'not-found' ? 'directory not found: ' : 'not a directory: ') + path.basename(target));
+        this.code = code;
+        this.target = target;
+    }
+}
+/**
  * Resolve the directory to scan: explicit argument, the last scan target, the
  * configured default, or the host working directory — in that order.
  */
 function resolveTarget(explicit, config) {
     const candidate = explicit ?? config.defaultDir ?? recallTarget() ?? process.cwd();
     const resolved = path.resolve(candidate);
-    if (!fs.existsSync(resolved)) {
-        throw new Error(`directory not found: ${resolved}`);
-    }
-    if (!fs.statSync(resolved).isDirectory()) {
-        throw new Error(`not a directory: ${resolved}`);
-    }
+    if (!fs.existsSync(resolved))
+        throw new TargetError('not-found', resolved);
+    if (!fs.statSync(resolved).isDirectory())
+        throw new TargetError('not-a-directory', resolved);
     return resolved;
 }
 function checkDirectory(dir, remember = true) {
@@ -109,15 +136,39 @@ function checkDirectory(dir, remember = true) {
     }
     return { report, history: readHistory(dir, 20), durationMs: Date.now() - started };
 }
+/** Coerce the loosely-typed answers array the panel (or an import file) sends. */
+function toMonitorAnswers(raw, fallbackPlatform) {
+    const list = Array.isArray(raw) ? raw : [];
+    const answers = [];
+    for (const entry of list) {
+        const record = asRecord(entry);
+        const questionId = stringField(record, 'questionId');
+        if (questionId === undefined)
+            continue;
+        const answer = {
+            questionId,
+            platform: stringField(record, 'platform') ?? fallbackPlatform,
+            mentioned: record.mentioned === true,
+            cited: record.cited === true,
+        };
+        const note = stringField(record, 'note');
+        if (note !== undefined)
+            answer.note = note;
+        answers.push(answer);
+    }
+    return answers;
+}
+/** Panel previews are capped so a huge generated asset cannot stall the tab. */
+const MAX_PREVIEW_CHARS = 200 * 1024;
 function monitorPayload(dir) {
     const runs = readMonitorRuns(dir);
     const summary = summarizeMonitor(runs);
     return { summary, runs: runs.slice(-20), compare: compareLastRun(runs) };
 }
-function generateFor(dir, body) {
+function generateFor(dir, body, fallbackOutDir) {
     const graph = runCheck(dir).graph;
     const options = {};
-    const outDir = stringField(body, 'outDir');
+    const outDir = stringField(body, 'outDir') ?? fallbackOutDir;
     if (outDir !== undefined)
         options.outDir = path.resolve(dir, outDir);
     if (body.force === true)
@@ -127,7 +178,71 @@ function generateFor(dir, body) {
     const maxEntries = body.maxEntries;
     if (typeof maxEntries === 'number' && Number.isFinite(maxEntries))
         options.maxEntries = maxEntries;
+    const requested = Array.isArray(body.files) ? body.files.filter((name) => typeof name === 'string') : [];
+    const names = requested.filter((name) => ASSET_NAMES.includes(name));
+    if (names.length > 0)
+        options.names = names;
     return generateAssets(graph, options);
+}
+/**
+ * What exists next to the project versus what the generator would write now.
+ * A dry run gives the expected size and the verification verdict without
+ * touching disk, so the panel can say "3 of 4 up to date".
+ */
+function assetsPayload(dir) {
+    const graph = runCheck(dir).graph;
+    const preview = generateAssets(graph, { outDir: dir, dryRun: true });
+    const expected = new Map(preview.files.map((file) => [path.basename(file.path), file]));
+    const files = ASSET_NAMES.map((name) => {
+        const target = path.join(dir, name);
+        const exists = fs.existsSync(target);
+        const stat = exists ? fs.statSync(target) : undefined;
+        const planned = expected.get(name);
+        const expectedBytes = planned?.bytes ?? 0;
+        const bytes = stat?.size ?? 0;
+        const status = stat === undefined ? 'missing' : bytes === expectedBytes ? 'current' : 'stale';
+        const item = { name, path: target, exists, bytes, expectedBytes, status };
+        if (stat !== undefined)
+            item.generatedAt = stat.mtime.toISOString();
+        // A missing file is not stale; the dry-run reason would only add noise.
+        if (status === 'stale' && planned?.reason !== undefined)
+            item.reason = planned.reason;
+        return item;
+    });
+    return { dir, files, verification: preview.verification };
+}
+/** Electron is not a typed dependency (the CLI never loads it), so import it softly. */
+const dynamicImport = new Function('specifier', 'return import(specifier)');
+/** Opens the host's native directory picker; undefined when no bridge exists. */
+async function pickDirectory() {
+    try {
+        const electron = await dynamicImport('electron');
+        const dialog = electron?.dialog ?? electron?.default?.dialog;
+        if (dialog === undefined || typeof dialog.showOpenDialog !== 'function')
+            return undefined;
+        const result = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Select a project directory' });
+        if (result?.canceled === true)
+            return undefined;
+        const chosen = Array.isArray(result?.filePaths) ? result.filePaths[0] : undefined;
+        return typeof chosen === 'string' && chosen !== '' ? chosen : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+/** Hands a file:line target to the OS so the host's editor opens it. */
+async function openInEditor(target) {
+    try {
+        const electron = await dynamicImport('electron');
+        const shell = electron?.shell ?? electron?.default?.shell;
+        if (shell === undefined || typeof shell.openPath !== 'function')
+            return false;
+        const failure = await shell.openPath(target);
+        return typeof failure === 'string' ? failure === '' : true;
+    }
+    catch {
+        return false;
+    }
 }
 export function apply(ctx, config = {}) {
     const webServer = ctx.webServer;
@@ -149,9 +264,23 @@ export function apply(ctx, config = {}) {
                 if (sub === '/state' && method === 'GET') {
                     const target = query.get('dir') ?? recallTarget() ?? config.defaultDir ?? process.cwd();
                     const resolved = path.resolve(target);
-                    const history = fs.existsSync(resolved) ? readHistory(resolved, 20) : [];
-                    const runs = fs.existsSync(resolved) ? readMonitorRuns(resolved) : [];
-                    sendJson(res, 200, { ok: true, value: { target: resolved, history, monitorRuns: runs.slice(-20), rulePack: RULE_PACK, rulePackVersion: RULE_PACK_VERSION } });
+                    const exists = fs.existsSync(resolved) && fs.statSync(resolved).isDirectory();
+                    const history = exists ? readHistory(resolved, 20) : [];
+                    const runs = exists ? readMonitorRuns(resolved) : [];
+                    sendJson(res, 200, {
+                        ok: true,
+                        value: {
+                            target: exists ? resolved : undefined,
+                            dirName: path.basename(resolved),
+                            exists,
+                            hasPackageJson: exists && fs.existsSync(path.join(resolved, 'package.json')),
+                            fallbackDir: process.cwd(),
+                            history,
+                            monitorRuns: runs.slice(-20),
+                            rulePack: RULE_PACK,
+                            rulePackVersion: RULE_PACK_VERSION,
+                        },
+                    });
                     return;
                 }
                 if (sub === '/panel' && (method === 'GET' || method === 'HEAD')) {
@@ -177,6 +306,33 @@ export function apply(ctx, config = {}) {
                     sendJson(res, 200, { ok: true, value: { questions: MONITOR_QUESTIONS, minSamples: 20 } });
                     return;
                 }
+                if (sub === '/assets' && method === 'GET') {
+                    const dir = resolveTarget(query.get('dir') ?? undefined, config);
+                    sendJson(res, 200, { ok: true, value: assetsPayload(dir) });
+                    return;
+                }
+                if (sub === '/preview' && method === 'GET') {
+                    const dir = resolveTarget(query.get('dir') ?? undefined, config);
+                    const requested = query.get('name') ?? '';
+                    if (!ASSET_NAMES.includes(requested)) {
+                        throw new Error('unknown asset: ' + (requested === '' ? '(missing name)' : path.basename(requested)));
+                    }
+                    const target = path.join(dir, requested);
+                    if (!fs.existsSync(target))
+                        throw new Error('asset not generated yet: ' + requested);
+                    const raw = fs.readFileSync(target, 'utf8');
+                    const truncated = raw.length > MAX_PREVIEW_CHARS;
+                    sendJson(res, 200, {
+                        ok: true,
+                        value: {
+                            name: requested,
+                            content: truncated ? raw.slice(0, MAX_PREVIEW_CHARS) : raw,
+                            bytes: Buffer.byteLength(raw),
+                            truncated,
+                        },
+                    });
+                    return;
+                }
                 if (method === 'POST') {
                     const body = asRecord(await readBody(req));
                     const explicit = stringField(body, 'dir') ?? query.get('dir') ?? undefined;
@@ -187,7 +343,9 @@ export function apply(ctx, config = {}) {
                     }
                     if (sub === '/generate') {
                         const dir = resolveTarget(explicit, config);
-                        const result = generateFor(dir, body);
+                        // The panel writes next to the project: its asset table lists the
+                        // files that ship with the repository, not a temp copy.
+                        const result = generateFor(dir, body, '.');
                         sendJson(res, 200, { ok: true, value: result });
                         return;
                     }
@@ -198,26 +356,54 @@ export function apply(ctx, config = {}) {
                         sendJson(res, 200, { ok: true, value: result });
                         return;
                     }
+                    if (sub === '/pick-dir') {
+                        const selected = await pickDirectory();
+                        sendJson(res, 200, { ok: true, value: { path: selected ?? null } });
+                        return;
+                    }
+                    if (sub === '/open-file') {
+                        const relative = stringField(body, 'path');
+                        if (relative === undefined)
+                            throw new Error('path is required');
+                        const base = resolveTarget(explicit, config);
+                        const target = path.resolve(base, relative);
+                        const line = typeof body.line === 'number' && Number.isFinite(body.line) ? body.line : undefined;
+                        const opened = fs.existsSync(target) ? await openInEditor(target) : false;
+                        sendJson(res, 200, { ok: true, value: { opened, path: target, line } });
+                        return;
+                    }
                     if (sub === '/monitor') {
                         const dir = resolveTarget(explicit, config);
                         const platform = stringField(body, 'platform') ?? 'unspecified';
-                        const rawAnswers = Array.isArray(body.answers) ? body.answers : [];
-                        const answers = rawAnswers.map((entry) => {
-                            const record = asRecord(entry);
-                            const answer = {
-                                questionId: stringField(record, 'questionId') ?? '',
-                                platform,
-                                mentioned: record.mentioned === true,
-                                cited: record.cited === true,
-                            };
-                            const note = stringField(record, 'note');
-                            if (note !== undefined)
-                                answer.note = note;
-                            return answer;
-                        });
+                        const answers = toMonitorAnswers(body.answers, platform);
                         const run = recordRun({ target: dir, name: path.basename(dir), platform, answers });
                         appendMonitorRun(dir, run);
                         sendJson(res, 200, { ok: true, value: monitorPayload(dir) });
+                        return;
+                    }
+                    if (sub === '/monitor/import') {
+                        const dir = resolveTarget(explicit, config);
+                        const rawRuns = Array.isArray(body.runs) ? body.runs : [];
+                        if (rawRuns.length === 0)
+                            throw new Error('runs must be a non-empty array');
+                        let imported = 0;
+                        for (const entry of rawRuns) {
+                            const record = asRecord(entry);
+                            const answers = toMonitorAnswers(record.answers, stringField(record, 'platform') ?? 'imported');
+                            if (answers.length === 0)
+                                continue;
+                            const at = stringField(record, 'at');
+                            const run = recordRun({
+                                target: dir,
+                                name: path.basename(dir),
+                                platform: stringField(record, 'platform') ?? 'imported',
+                                ...(at !== undefined ? { at } : {}),
+                                answers,
+                            });
+                            appendMonitorRun(dir, run);
+                            imported += 1;
+                        }
+                        sendJson(res, 200, { ok: true, value: { ...monitorPayload(dir), imported } });
                         return;
                     }
                     sendJson(res, 404, { ok: false, error: `unknown endpoint: ${sub}` });
@@ -231,7 +417,12 @@ export function apply(ctx, config = {}) {
             }
             catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
-                sendJson(res, 400, { ok: false, error: message });
+                const body = { ok: false, error: message };
+                if (error instanceof TargetError) {
+                    body.code = error.code;
+                    body.detail = error.target;
+                }
+                sendJson(res, 400, body);
             }
         };
         ctx.effect?.(() => {

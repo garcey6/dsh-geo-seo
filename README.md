@@ -9,7 +9,7 @@ shows every deduction with a file and line anchor, and states the evidence behin
 rule. **It does not promise rankings, traffic or citations, and it never estimates
 them.** A score is a description of your documentation, not a forecast.
 
-Current version 0.1.1 · requires Node 22.6+ and DSH 0.2.2-rc.5+ · MIT · Last updated: 2026-11-24 ·
+Current version 0.2.0 · requires Node 22.6+ and DSH 0.2.2-rc.5+ · MIT · Last updated: 2026-11-24 ·
 中文简介见 [docs/INTRO.md](docs/INTRO.md).
 
 ```
@@ -29,6 +29,14 @@ INFO  MAC-003 -3  llms.txt not found
         evidence: weak
 ```
 
+## Contents
+
+- [Install](#install) — [plugin market](#as-a-dsh-plugin-from-the-plugin-market) · [git URL](#from-a-git-url) · [checkout](#from-a-checkout-of-this-repository) · [CLI](#as-a-cli)
+- [What it does](#what-it-does) — commands, flags, [the sidebar panel](#in-the-sidebar-panel)
+- [Scoring](#scoring) — [the seven dimensions](#scoring) · [what caps a score](#scoring)
+- [Generated files](#generated-files)
+- [Privacy](#privacy) · [What this cannot do](#what-this-cannot-do)
+- [Development](#development) · [Changelog](#changelog) · [Links](#links) · [License](#license)
 ## Install
 
 ### As a DSH plugin (from the plugin market)
@@ -71,9 +79,10 @@ install it like any other bundle.
 
 2. The index installs **from git at a pinned commit**. A git source resolves to exactly
    this tree — manifest, committed `dist/` and client entry all as reviewed — and never
-   depends on registry metadata or CDN caching. The npm package is correct too:
-   `dsh-geo-seo@0.1.1` declares `engines.dsh: ">=0.2.2-rc.5"`, so a registry install
-   (`npm install` / `pnpm add`) works as well.
+   depends on registry metadata or CDN caching. The index serves 0.2.0 from that commit.
+   The registry still holds 0.1.1, which installs as well (`npm install dsh-geo-seo`,
+   `engines.dsh: ">=0.2.2-rc.5"`); it predates the panel redesign, so the sidebar keeps
+   the 0.1.x layout until 0.2.0 is published to npm.
 
 3. Find **GEO / SEO** in the index and install it. The plugin registers five agent tools —
    `geo_seo_check`, `geo_seo_generate`, `geo_seo_audit`, `geo_seo_monitor`,
@@ -162,6 +171,31 @@ directory), `--format text|json|markdown`, `--strict`, `--fail-under <score>`,
 Exit codes are stable for CI: `0` ok, `1` threshold or strict failure, `2` usage error,
 `3` internal error.
 
+### In the sidebar panel
+
+The panel is one vertical page, not a tab set. It reads top to bottom the way a fix
+session runs:
+
+1. **Project** — the workspace root is scanned on open; the folder button is the only
+   control, and the text field hides under *Advanced*.
+2. **Score** — a 96px ring, one sentence of verdict, `N docs · M files · Xms` and the rule
+   pack version. The dimension breakdown folds away underneath.
+3. **Issues and fixes** — one card per deduction, ordered by priority, then by the points
+   lost. Every card carries a priority tag, a clickable location, the impact, a suggestion
+   and a **copyable prompt**: a ready-to-paste instruction naming the file and line.
+   A clean project shows nothing to fix plus the number of rules that ran.
+4. **Generated assets** — the four files with size, timestamp and a status of current,
+   missing or outdated; generate all, generate the selected ones, or preview.
+5. **Crawlability** — the 13 checks split into international (8) and domestic (5), with the
+   standing note that an allow-list is not a citation.
+6. **Visibility monitoring** — record a sample from the 24-question bank, read the trend,
+   export or import the log as JSON.
+
+Sections 4-6 start collapsed and show a badge when they need attention. Errors name the
+folder, never the absolute path; the path sits behind *View details*. The panel calls the
+same endpoints as the CLI: `state`, `assets`, `preview`, `questions`, `monitor` (GET) and
+`check`, `generate`, `audit`, `monitor`, `monitor/import`, `pick-dir`, `open-file` (POST).
+
 ```yaml
 # .github/workflows/geo.yml
 - run: node dist/src/cli/main.js check --dir . --fail-under 70 --strict --format json > geo.json
@@ -213,7 +247,7 @@ For this repository that block looks like:
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "dsh-geo-seo",
-  "softwareVersion": "0.1.1",
+  "softwareVersion": "0.2.0",
   "applicationCategory": "DeveloperApplication",
   "license": "MIT",
   "author": { "@type": "Person", "name": "garcey" },
@@ -264,7 +298,7 @@ evidence level; adding a rule means adding one entry plus a fixture in `test/`.
 
 ## Changelog
 
-Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0.1.1
+Per-release notes live in [CHANGELOG.md](CHANGELOG.md); the current release is 0.2.0
 (2026-11-24).
 
 ## Links

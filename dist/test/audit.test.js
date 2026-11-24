@@ -50,3 +50,31 @@ test('a crawler-specific group beats the permissive wildcard group', () => {
     assert.equal(robotsAllows(robots, 'GPTBot'), false);
     assert.equal(robotsAllows(robots, 'ClaudeBot'), true);
 });
+test('the fixed 13-check list is reported with pass/fail for each entry', () => {
+    const result = runAudit(site({}));
+    assert.equal(result.checks.length, 13);
+    assert.equal(result.checks.filter((check) => check.scope === 'international').length, 8);
+    assert.equal(result.checks.filter((check) => check.scope === 'domestic').length, 5);
+    for (const check of result.checks) {
+        assert.equal(typeof check.ok, 'boolean', check.id);
+        assert.ok(check.title.length > 0 && check.titleZh.length > 0, check.id);
+        const failed = result.findings.some((finding) => finding.ruleId === check.id);
+        assert.equal(check.ok, !failed, check.id + ' must mirror the findings');
+    }
+    // A repository with no robots.txt fails the first check and passes the rest
+    // that cannot fire without a site.
+    assert.equal(result.checks.find((check) => check.id === 'AUD-INT-001')?.ok, false);
+});
+test('every audit finding ships a priority, an impact and two rendered prompts', () => {
+    const result = runAudit(site({
+        'public/robots.txt': 'User-agent: GPTBot\nDisallow: /\n',
+    }));
+    assert.ok(result.findings.length > 0);
+    for (const finding of result.findings) {
+        assert.ok(['high', 'medium', 'low'].includes(finding.priority), finding.ruleId);
+        assert.ok(finding.impact.length > 10, finding.ruleId);
+        assert.ok(finding.impactZh.length > 3, finding.ruleId);
+        assert.ok(!/[{}]/.test(finding.prompt + finding.promptZh), finding.ruleId);
+        assert.ok(finding.promptZh.length > 8, finding.ruleId);
+    }
+});

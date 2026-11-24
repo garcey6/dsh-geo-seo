@@ -5,7 +5,8 @@
  * version so a report can always say which rules produced it. Deductions are
  * capped per dimension by the scorer, not here.
  */
-import type { DimensionId, RuleContext, RuleDefinition } from './types.js';
+import type { DimensionId, RuleContext, RuleDefinition, RuleDefinitionBase, RulePromptFields } from './types.js';
+import { PROMPTS } from './prompts.js';
 import {
   anchors,
   findSuperlatives,
@@ -52,7 +53,8 @@ const MIN_WORDS = 600;
 const STALE_DAYS = 365;
 const DRIFT_DAYS = 90;
 
-export const RULES: RuleDefinition[] = [
+/** Rule data before the panel copy is attached; see RULES below. */
+const BASE_RULES: RuleDefinitionBase[] = [
   // ---------------------------------------------------------------- relevance
   {
     id: 'REL-001',
@@ -437,6 +439,7 @@ export const RULES: RuleDefinition[] = [
         suggestion: 'Add a configuration table with columns name, type, default and description.',
         deduction: 4,
         anchors: source ? [{ file: source.file }] : [],
+        missing: missing.slice(0, 6),
       }];
     },
   },
@@ -930,7 +933,8 @@ export interface AdvisoryRule {
   check: (ctx: RuleContext) => { detail: string; suggestion: string; anchors: { file: string; line?: number }[] }[];
 }
 
-export const ADVISORY_RULES: AdvisoryRule[] = [
+/** Advisory data before the panel copy is attached; see ADVISORY_RULES below. */
+const ADVISORY_BASE: AdvisoryRule[] = [
   {
     id: 'TYP-001',
     severity: 'info',
@@ -1001,6 +1005,27 @@ export const ADVISORY_RULES: AdvisoryRule[] = [
     },
   },
 ];
+
+/** Looks up the panel copy a rule must ship; a missing entry is a bug, not a gap. */
+function promptFor(ruleId: string): RulePromptFields {
+  const copy = PROMPTS[ruleId];
+  if (copy === undefined) {
+    throw new Error('rule ' + ruleId + ' has no entry in prompts.ts (priority, impact and prompt are required)');
+  }
+  return copy;
+}
+
+/**
+ * The published pack: rule data plus the panel half of each rule (urgency, the
+ * cost to the reader, and a copy-ready repair prompt).
+ */
+export const RULES: RuleDefinition[] = BASE_RULES.map((rule) => ({ ...rule, ...promptFor(rule.id) }));
+
+/** Advisories carry the same panel copy, but never score. */
+export const ADVISORY_RULES: (AdvisoryRule & RulePromptFields)[] = ADVISORY_BASE.map((rule) => ({
+  ...rule,
+  ...promptFor(rule.id),
+}));
 
 export { MIN_WORDS, STALE_DAYS, DRIFT_DAYS };
 export { bodyText };
